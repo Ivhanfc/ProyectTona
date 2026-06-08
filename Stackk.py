@@ -29,7 +29,6 @@ class Stackk:
             print("This  array is a CEROU")
             return True
         else: 
-            print("This ArrayStack is FULL")
             return False
         
 
