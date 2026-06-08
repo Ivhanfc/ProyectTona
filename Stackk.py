@@ -6,19 +6,30 @@ class Stackk:
         
     def push(self, value):
         self.Stack.append(value)
+        self.Top += 1 
     
     def pop(self):
-        self.Stack.remove (len(self.Stack) - 1)
+        if self.isEmpty():
+            print("Stack is empty, nothing to pop")
+            return None
+        topValue = self.Stack[self.Top]
+        del self.Stack[self.Top]
+        self.Top -= 1
+        return topValue
 
     def peek(self):
-        print(len(self.Stack[self.Top]))
+        if self.isEmpty():
+            print("Stack is empty, nothing to pop")
+            return None
+        
+        return self.Stack[-1]
 
     def isEmpty(self):
-        if(len(self.Stack) < 0):
-            print("This fucking array is a CEROU")
+        if(len(self.Stack) == 0):
+            print("This  array is a CEROU")
             return True
         else: 
-            print("This ArrayStack is FULL BRODA")
+            print("This ArrayStack is FULL")
             return False
         
 

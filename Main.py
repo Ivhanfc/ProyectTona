@@ -1,7 +1,6 @@
 import Stackk
 import random
-import os
-
+from datetime import datetime
 class uber_clon:
 
     def __init__(self) -> None:    
@@ -44,8 +43,13 @@ class uber_clon:
         choosen_food = self.menu[food_int]
         self.orders[name] = choosen_food
         print(self.orders)
-        self.History.push(choosen_food)
+        now = datetime.now()
+        self.History.push(f"{choosen_food}, {now.strftime('%H:%M:%S')}")
         print("Comida ordenada, asignando repartidor...")
+        self.History.showStack()
+        self.History.peek()
+        self.History.showStack()
+        self.History.pop()
 
             
     def main(self):
@@ -58,6 +62,7 @@ class uber_clon:
             self.randomDeliverys(10)
             self.showMenu()
             self.addOrder()
+
         
 app = uber_clon()
 app.main()
