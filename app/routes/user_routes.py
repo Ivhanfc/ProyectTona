@@ -9,13 +9,13 @@ from sqlmodel import Session
 router = APIRouter()
 controller = UserController()
 
-@router.post("/users/create_user/", response_model=UserModel, status_code=status.HTTP_201_CREATED)
-def create_user(user_in: UserModel, db: Session = Depends(get_db)):
-    new_user = controller.create_new_user(db=db, user_data=user_in)
+@router.post("/users/create_user/", response_model=UserModel, status_code=status.HTTP_201_CREATED) ## this router connect to the controller method to create a new user in the database
+def create_user(user_in: UserModel, db: Session = Depends(get_db)): ##returning 201 status code if the user is created successfully
+    new_user = controller.create_new_user(db=db, user_data=user_in) 
 
     if not new_user:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_400_BAD_REQUEST, ##status code 400 is returned if the user already exists in the database
             detail="The username or email is registered"
         )
     return new_user

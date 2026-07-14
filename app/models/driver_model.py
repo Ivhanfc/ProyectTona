@@ -1,8 +1,8 @@
 from typing import Optional
 from sqlmodel import Field, SQLModel
 
-class DriverModel(SQLModel, table=True):
-    __tablename__: str = 'drivers' # type: ignore
+class DriverModel(SQLModel, table=True): # this line define a class create a sql table same time
+    __tablename__: str = 'drivers' # type: ignore // the name of the table in the database is 'drivers'
 
     id: Optional[int] = Field(default=None, primary_key=True)
     username: str = Field(index=True, unique=True, max_length=50)
