@@ -8,9 +8,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   Dimensions,
-  Animated
+  Animated,
+  ScrollView
 } from 'react-native';
-import { BlurView } from 'expo-blur';
 import { Pizza, Mail, Eye, EyeOff, ArrowRight } from 'lucide-react-native';
 
 // --- IMPORTACIÓN DE FUENTES ---
@@ -61,130 +61,140 @@ export default function LoginScreen() {
     }).start();
   };
 
+  // Ajuste de colores para que contrasten bien contra la nueva tarjeta blanca
   const emailBorderColor = emailFocusAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['#cbd5e1', '#00a2ff']
+    outputRange: ['#e2e8f0', '#00a2ff'] // Gris muy claro a azul
   });
   const emailBgColor = emailFocusAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['rgba(255, 255, 255, 0.7)', '#FFFFFF']
+    outputRange: ['#f8fafc', '#ffffff'] // Gris súper sutil a blanco
   });
 
   const passBorderColor = passwordFocusAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['#cbd5e1', '#00a2ff']
+    outputRange: ['#e2e8f0', '#00a2ff']
   });
   const passBgColor = passwordFocusAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['rgba(255, 255, 255, 0.7)', '#FFFFFF']
+    outputRange: ['#f8fafc', '#ffffff']
   });
 
   const handleLogin = () => {
     console.log('Intentando conectar al backend...', email, password);
   };
 
-  // Evita que la pantalla se renderice hasta que la fuente esté lista
   if (!fontsLoaded) {
-    return null; // En una app real, aquí puedes poner una pantalla de carga o el SplashScreen
+    return null;
   }
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.container}
     >
+
       <View pointerEvents="none" style={[styles.bgCircle, { backgroundColor: '#c7edff', top: '-5%', left: '-20%', width: 300, height: 300 }]} />
       <View pointerEvents="none" style={[styles.bgCircle, { backgroundColor: '#00a2ff', bottom: '5%', right: '-30%', width: 350, height: 350 }]} />
 
-      <View style={styles.innerContainer}>
 
-        <View style={styles.headerContainer}>
-          <View style={styles.brandRow}>
-            <Text style={styles.brandTitle}>TheEater</Text>
-            <Pizza
-              color="#00a2ff"
-              size={36}
-              strokeWidth={2.5}
-              style={{ transform: [{ rotate: '1deg' }], marginLeft: 8, marginTop: 4 }}
-            />
-          </View>
-          <Text style={styles.brandSubtitle}>Pedidos seguros, pide cuando quieras</Text>
-        </View>
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.innerContainer}>
 
-        <View style={styles.formWrapper}>
-          <BlurView intensity={50} tint="light" style={styles.glassCard}>
-
-            <View style={styles.blueGlassHeader}>
-              <Text style={styles.loginHeader}>Inicio de sesión</Text>
-              <Text style={styles.loginSubtext}>Ingresa tu correo electrónico y contraseña para continuar</Text>
+          <View style={styles.headerContainer}>
+            <View style={styles.brandRow}>
+              <Text style={styles.brandTitle}>TheEater</Text>
+              <Pizza
+                color="#00a2ff"
+                size={36}
+                strokeWidth={2.5}
+                style={{ transform: [{ rotate: '1deg' }], marginLeft: 8, marginTop: 4 }}
+              />
             </View>
+            <Text style={styles.brandSubtitle}>Pedidos seguros, pide cuando quieras</Text>
+          </View>
 
-            <Text style={styles.inputLabel}>Correo electrónico</Text>
-            <Animated.View style={[styles.inputContainer, { borderColor: emailBorderColor, backgroundColor: emailBgColor }]}>
-              <Mail color={isEmailFocused ? '#00a2ff' : '#64748b'} size={22} />
-              <TextInput
-                style={styles.textInput}
-                placeholder="ejemplo@correo.com"
-                placeholderTextColor="#94a3b8"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={email}
-                onChangeText={setEmail}
-                onFocus={() => handleEmailFocus(true)}
-                onBlur={() => handleEmailFocus(false)}
-                underlineColorAndroid="transparent"
-                selectionColor="#00a2ff"
-              />
-            </Animated.View>
+          <View style={styles.formWrapper}>
 
-            <Text style={styles.inputLabel}>Contraseña</Text>
-            <Animated.View style={[styles.inputContainer, { borderColor: passBorderColor, backgroundColor: passBgColor }]}>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Ingresa tu contraseña"
-                placeholderTextColor="#94a3b8"
-                secureTextEntry={!isPasswordVisible}
-                autoCapitalize="none"
-                value={password}
-                onChangeText={setPassword}
-                onFocus={() => handlePasswordFocus(true)}
-                onBlur={() => handlePasswordFocus(false)}
-                underlineColorAndroid="transparent"
-                selectionColor="#00a2ff"
-              />
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => setIsPasswordVisible(!isPasswordVisible)}
-                style={styles.eyeButton}
-              >
-                {isPasswordVisible ? (
-                  <Eye color="#00a2ff" size={20} />
-                ) : (
-                  <EyeOff color="#94a3b8" size={20} />
-                )}
+
+            <View style={styles.solidCard}>
+
+              <View style={styles.blueGlassHeader}>
+                <Text style={styles.loginHeader}>Inicio de sesión</Text>
+                <Text style={styles.loginSubtext}>Ingresa tu correo electrónico y contraseña para continuar</Text>
+              </View>
+
+              <Text style={styles.inputLabel}>Correo electrónico</Text>
+              <Animated.View style={[styles.inputContainer, { borderColor: emailBorderColor, backgroundColor: emailBgColor }]}>
+                <Mail color={isEmailFocused ? '#00a2ff' : '#94a3b8'} size={22} />
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="ejemplo@correo.com"
+                  placeholderTextColor="#94a3b8"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  value={email}
+                  onChangeText={setEmail}
+                  onFocus={() => handleEmailFocus(true)}
+                  onBlur={() => handleEmailFocus(false)}
+                  underlineColorAndroid="transparent"
+                  selectionColor="#00a2ff"
+                />
+              </Animated.View>
+
+              <Text style={styles.inputLabel}>Contraseña</Text>
+              <Animated.View style={[styles.inputContainer, { borderColor: passBorderColor, backgroundColor: passBgColor }]}>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Ingresa tu contraseña"
+                  placeholderTextColor="#94a3b8"
+                  secureTextEntry={!isPasswordVisible}
+                  autoCapitalize="none"
+                  value={password}
+                  onChangeText={setPassword}
+                  onFocus={() => handlePasswordFocus(true)}
+                  onBlur={() => handlePasswordFocus(false)}
+                  underlineColorAndroid="transparent"
+                  selectionColor="#00a2ff"
+                />
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+                  style={styles.eyeButton}
+                >
+                  {isPasswordVisible ? (
+                    <Eye color="#00a2ff" size={20} />
+                  ) : (
+                    <EyeOff color="#94a3b8" size={20} />
+                  )}
+                </TouchableOpacity>
+              </Animated.View>
+
+              <TouchableOpacity style={styles.forgotPasswordContainer} activeOpacity={0.6}>
+                <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
               </TouchableOpacity>
-            </Animated.View>
 
-            <TouchableOpacity style={styles.forgotPasswordContainer} activeOpacity={0.6}>
-              <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
+              <TouchableOpacity style={styles.loginButton} onPress={handleLogin} activeOpacity={0.8}>
+                <Text style={styles.loginButtonText}>Siguiente</Text>
+                <ArrowRight color="#FFFFFF" size={20} style={{ marginLeft: 8 }} />
+              </TouchableOpacity>
+
+            </View>
+          </View>
+
+          <View style={styles.footerContainer}>
+            <Text style={styles.footerText}>¿No tienes una cuenta? </Text>
+            <TouchableOpacity activeOpacity={0.6}>
+              <Text style={styles.registerLinkText}>Regístrate</Text>
             </TouchableOpacity>
+          </View>
 
-            <TouchableOpacity style={styles.loginButton} onPress={handleLogin} activeOpacity={0.8}>
-              <Text style={styles.loginButtonText}>Siguiente</Text>
-              <ArrowRight color="#FFFFFF" size={20} style={{ marginLeft: 8 }} />
-            </TouchableOpacity>
-
-          </BlurView>
         </View>
-
-        <View style={styles.footerContainer}>
-          <Text style={styles.footerText}>¿No tienes una cuenta? </Text>
-          <TouchableOpacity activeOpacity={0.6}>
-            <Text style={styles.registerLinkText}>Regístrate</Text>
-          </TouchableOpacity>
-        </View>
-
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -192,11 +202,15 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#f1f5f9', // Fondo general un poco más oscuro para que contraste la tarjeta blanca
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    justifyContent: 'center', // Centra el contenido verticalmente cuando hay espacio de sobra
   },
   innerContainer: {
     flex: 1,
-    justifyContent: 'space-between',
+    justifyContent: 'center', // Cambiado a center para evitar empujar elementos hacia los extremos
     paddingHorizontal: 24,
     paddingTop: Platform.OS === 'ios' ? 70 : 60,
     paddingBottom: Platform.OS === 'ios' ? 40 : 30,
@@ -207,13 +221,13 @@ const styles = StyleSheet.create({
   bgCircle: {
     position: 'absolute',
     borderRadius: 200,
-    opacity: 0.25,
-    zIndex: 1,
+    opacity: 0.35,
+    zIndex: .1,
   },
   headerContainer: {
     alignSelf: 'flex-start',
     width: '100%',
-    marginTop: 20,
+    marginBottom: 32,
   },
   brandRow: {
     flexDirection: 'row',
@@ -232,22 +246,26 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   formWrapper: {
-    flex: 1,
-    justifyContent: 'center',
     width: '100%',
+    marginBottom: 32,
   },
-  glassCard: {
+  solidCard: {
     width: '100%',
     padding: 24,
     borderRadius: 24,
-    overflow: 'hidden',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.6)',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 4,
   },
   blueGlassHeader: {
-    backgroundColor: 'rgba(0, 162, 255, 0.08)',
-    borderColor: 'rgba(0, 162, 255, 0.2)',
+    backgroundColor: '#eff6ff',
+    borderColor: '#bfdbfe',
     borderWidth: 1,
     borderRadius: 16,
     paddingVertical: 16,
@@ -320,7 +338,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 3,
   },
   loginButtonText: {
     color: '#FFFFFF',
