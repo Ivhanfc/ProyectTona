@@ -8,7 +8,7 @@ import {
     Platform,
     Animated,
 } from 'react-native';
-import MapView, { Marker, Polyline, Region } from 'react-native-maps';
+import MapView, { Marker, Polyline, Region, UrlTile } from 'react-native-maps';
 import {
     PinchGestureHandler,
     PanGestureHandler,
@@ -299,112 +299,121 @@ export default function HomeScreen() {
         { latitude: mapNodes[2].latitude, longitude: mapNodes[2].longitude },
     ];
 
-    const renderContent = () => {
-        if (selectedTab === 'map') {
-            const CourierIcon = courierMode === 'motorbike' ? Bike : CarFront;
+  const renderContent = () => {
+    if (selectedTab === 'map') {
+        const CourierIcon = courierMode === 'motorbike' ? Bike : CarFront;
 
-            return (
-                <View style={styles.mapShell}>
-                    {Platform.OS === 'android' ? (
-                        <MapFallback progress={progress} />
-                    ) : (
-                        <MapView style={styles.map} initialRegion={initialRegion}>
-                            <Polyline
-                                coordinates={routePoints}
-                                strokeColor="#00a2ff"
-                                strokeWidth={4}
-                                lineCap="round"
-                            />
+        return (
+            <View style={styles.mapShell}>
+                {/* Removimos Platform.OS para mostrar el mapa real tanto en Android como en iOS */}
+                <MapView 
+                    style={styles.map} 
+                    initialRegion={initialRegion}
+                    mapType="none" /* Crucial: Elimina la capa base por defecto de Google/Apple */
+                >
+                    {/* Renderizamos las imágenes de OpenStreetMap */}
+                    <UrlTile
+                        urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        maximumZ={19}
+                        tileSize={256}
+                    />
 
-                            <NodeMarker
-                                title="Pickup"
-                                description="Restaurant node"
-                                latitude={mapNodes[0].latitude}
-                                longitude={mapNodes[0].longitude}
-                                tint="#111827"
-                                Icon={Package}
-                            />
+                    <Polyline
+                        coordinates={routePoints}
+                        strokeColor="#00a2ff"
+                        strokeWidth={4}
+                        lineCap="round"
+                    />
 
-                            {/* Animated Courier Marker */}
-                            <NodeMarker
-                                title="Courier"
-                                description="Your driver is on the way"
-                                latitude={courierLoc.latitude}
-                                longitude={courierLoc.longitude}
-                                tint="#00a2ff"
-                                Icon={CourierIcon}
-                            />
+                    <NodeMarker
+                        title="Pickup"
+                        description="Restaurant node"
+                        latitude={mapNodes[0].latitude}
+                        longitude={mapNodes[0].longitude}
+                        tint="#111827"
+                        Icon={Package}
+                    />
 
-                            {/* Destination Marker - Now Green */}
-                            <NodeMarker
-                                title="You"
-                                description="Your position"
-                                latitude={mapNodes[2].latitude}
-                                longitude={mapNodes[2].longitude}
-                                tint="#16a34a"
-                                Icon={UserRound}
-                            />
-                        </MapView>
-                    )}
+                    {/* Animated Courier Marker */}
+                    <NodeMarker
+                        title="Courier"
+                        description="Your driver is on the way"
+                        latitude={courierLoc.latitude}
+                        longitude={courierLoc.longitude}
+                        tint="#00a2ff"
+                        Icon={CourierIcon}
+                    />
 
-                    <View style={styles.trackerCard}>
-                        <View style={styles.trackerHeader}>
-                            <View style={styles.trackerIconWrap}>
-                                <CourierIcon size={20} color="#00a2ff" strokeWidth={2.2} />
-                            </View>
-                            <View style={{ flex: 1 }}>
-                                <Text style={styles.trackerTitle}>Courier on the way</Text>
-                                <Text style={styles.trackerSubtitle}>Heading to your position</Text>
-                            </View>
-                            <View style={styles.etaBadge}>
-                                <Text style={styles.etaText}>{eta} min</Text>
-                            </View>
+                    {/* Destination Marker */}
+                    <NodeMarker
+                        title="You"
+                        description="Your position"
+                        latitude={mapNodes[2].latitude}
+                        longitude={mapNodes[2].longitude}
+                        tint="#16a34a"
+                        Icon={UserRound}
+                    />
+                </MapView>
+
+                {/* Tarjeta de seguimiento inferior */}
+                <View style={styles.trackerCard}>
+                    <View style={styles.trackerHeader}>
+                        <View style={styles.trackerIconWrap}>
+                            <CourierIcon size={20} color="#00a2ff" strokeWidth={2.2} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                            <Text style={styles.trackerTitle}>Courier on the way</Text>
+                            <Text style={styles.trackerSubtitle}>Heading to your position</Text>
+                        </View>
+                        <View style={styles.etaBadge}>
+                            <Text style={styles.etaText}>{eta} min</Text>
+                        </View>
+                    </View>
+
+                    <View style={styles.trackerRoute}>
+                        <View style={styles.routePoint}>
+                            <View style={styles.routeDot} />
+                            <Text style={styles.routeLabel}>Courier</Text>
                         </View>
 
-                        <View style={styles.trackerRoute}>
-                            <View style={styles.routePoint}>
-                                <View style={styles.routeDot} />
-                                <Text style={styles.routeLabel}>Courier</Text>
-                            </View>
+                        {/* Animated Live Tracker Progress Bar */}
+                        <View style={styles.routeLineContainer}>
+                            <Animated.View
+                                style={[
+                                    styles.routeProgressLine,
+                                    { width: progress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }
+                                ]}
+                            />
+                            <Animated.View
+                                style={[
+                                    styles.movingTrackerIcon,
+                                    { left: progress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }
+                                ]}
+                            >
+                                <CourierIcon size={14} color="#00a2ff" strokeWidth={2.5} />
+                            </Animated.View>
+                        </View>
 
-                            {/* Animated Live Tracker Progress Bar */}
-                            <View style={styles.routeLineContainer}>
-                                <Animated.View
-                                    style={[
-                                        styles.routeProgressLine,
-                                        { width: progress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }
-                                    ]}
-                                />
-                                <Animated.View
-                                    style={[
-                                        styles.movingTrackerIcon,
-                                        { left: progress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }
-                                    ]}
-                                >
-                                    <CourierIcon size={14} color="#00a2ff" strokeWidth={2.5} />
-                                </Animated.View>
-                            </View>
-
-                            <View style={styles.routePoint}>
-                                <View style={[styles.routeDot, styles.routeDotDestination]} />
-                                <Text style={styles.routeLabel}>You</Text>
-                            </View>
+                        <View style={styles.routePoint}>
+                            <View style={[styles.routeDot, styles.routeDotDestination]} />
+                            <Text style={styles.routeLabel}>You</Text>
                         </View>
                     </View>
                 </View>
-            );
-        }
-
-        return (
-            <View style={styles.sectionCard}>
-                <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>{navItems.find(t => t.key === selectedTab)?.label}</Text>
-                    <Text style={styles.sectionSubtitle}>View detailed information</Text>
-                </View>
-                <Text style={styles.placeholderText}>This section can be expanded later.</Text>
             </View>
         );
-    };
+    }
+
+    return (
+        <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>{navItems.find(t => t.key === selectedTab)?.label}</Text>
+                <Text style={styles.sectionSubtitle}>View detailed information</Text>
+            </View>
+            <Text style={styles.placeholderText}>This section can be expanded later.</Text>
+        </View>
+    );
+};
 
     return (
         <View style={styles.container}>
