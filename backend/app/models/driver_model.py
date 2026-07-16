@@ -1,5 +1,5 @@
-from typing import Optional
-from sqlmodel import Field, SQLModel
+from typing import Optional, List
+from sqlmodel import Field, SQLModel, Relationship
 
 class DriverModel(SQLModel, table=True): # this line define a class create a sql table same time
     __tablename__: str = 'drivers' # type: ignore // the name of the table in the database is 'drivers'
@@ -10,4 +10,6 @@ class DriverModel(SQLModel, table=True): # this line define a class create a sql
     bio: Optional[str] = Field(default=None, max_length=255)
     is_active: bool = Field(default=True)
     rating: float = Field(default=0.0)
+
+    orders: List["OrderModel"] = Relationship(back_populates="driver")
 
