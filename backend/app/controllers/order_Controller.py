@@ -1,8 +1,8 @@
 from typing import Dict
 
-from sqlmodel import Session, select, desc
+from sqlmodel import Session, asc, select, desc
 from backend.app.models.order_model import OrderModel
-from backend.app.models.structures_data import Stackk
+from backend.app.models.structures_data import Queuee, Stackk
 from backend.app.models.user_model import UserModel
 from backend.app.models.driver_model import DriverModel
 
@@ -74,4 +74,50 @@ class OrderController: ## this controller is responsible for handling the busine
         except Exception as e:
             print(f"Error in get_user_order_history_stack: {e}")
             return None
+    
+    def get_pending_orders_queue(self, db: Session) -> Queuee:
+        try:
+            statement = (
+                select(OrderModel)
+                .where(OrderModel.driver_id == None)
+                .order_by(asc(OrderModel.id))
+            )
+            orders =db.exec(statement).all()
+            order_queue = Queuee()
+            for order in orders:
+                order_queue.enqueue(order)
+
+            return order_queue
+        except Exception as e:
+            print(f"Error in get_pending_orders_queue: {e}")
+            return Queuee()
+    
+    def accept_order(self, db: Session, order_id: int, driver_id: int) -> OrderModel | None:
+        try:
+            driver = db.get(DriverModel, driver_id)
+            if not driver:
+                print(f"Driver with id {driver_id} does not exist.")
+                return None
             
+            order = db.get(OrderModel, order_id)
+            if not order:
+                print(f"Order with id {order_id} does not exist.")
+                return None
+            
+            if order.driver_id is not None:
+                print(f"Order with id {order_id} has already been accepted by another driver.")
+                return None
+            
+            order.driver_id = driver_id
+            order.status = "accepted"
+
+            db.add(order)
+            db.commit()
+            db.refresh(order)
+
+            print(f"Driver {driver.username} has accepted order {order.id}.")
+            return order
+        except Exception as e:
+            db.rollback()
+            print(f"Error in accept_order: {e}")
+            return None
