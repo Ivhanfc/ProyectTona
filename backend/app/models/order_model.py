@@ -7,9 +7,8 @@ class OrderModel(SQLModel, table=True): # this line define a class create a sql 
     description: str = Field(max_length=255)
     
     user_id: int = Field(foreign_key="users.id")
-    driver_id: Optional[int] = Field(default=None, foreign_key="drivers.id") 
+    driver_id: Optional[int] = Field(default=None, foreign_key="drivers.id")
 
     user: "UserModel" = Relationship(back_populates="orders")
     driver: Optional["DriverModel"] = Relationship(back_populates="orders")
-
     
