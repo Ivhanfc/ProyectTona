@@ -1,5 +1,5 @@
 from sqlmodel import Session, select
-from backend.app.models.user_model import UserModel
+from app.models.user_model import UserModel
 
 class UserController:
     

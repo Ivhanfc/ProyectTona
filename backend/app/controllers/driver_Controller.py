@@ -1,5 +1,5 @@
 from sqlmodel import Session, select
-from backend.app.models.driver_model import DriverModel
+from app.models.driver_model import DriverModel
 
 class DriverController:
     

@@ -1,6 +1,6 @@
 from sqlmodel import create_engine, Session, SQLModel
-from backend.app.models.user_model import UserModel
-from backend.app.models.driver_model import DriverModel
+from app.models.user_model import UserModel
+from app.models.driver_model import DriverModel
 
 sqlite_file_name = "database.db" 
 sqlite_url = f"sqlite:///{sqlite_file_name}"

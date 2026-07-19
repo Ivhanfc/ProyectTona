@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException, Depends, status
 
 from typing import List
-from backend.app.controllers.driver_Controller import DriverController 
-from backend.app.models.driver_model import DriverModel
-from backend.app.database import get_db
+from app.controllers.driver_Controller import DriverController 
+from app.models.driver_model import DriverModel
+from app.database import get_db
 from sqlmodel import Session, select, SQLModel
 
 router = APIRouter()
