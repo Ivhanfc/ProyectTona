@@ -1,15 +1,12 @@
-from app.controllers.order_Controller import OrderController
-
-
 class Stackk:
     def __init__(self) -> None:
         self.Stack = []
         self.Top = -1
-        
+
     def push(self, value):
         self.Stack.append(value)
-        self.Top += 1 
-    
+        self.Top += 1
+
     def pop(self):
         if self.isEmpty():
             print("Stack is empty, nothing to pop")
@@ -23,16 +20,17 @@ class Stackk:
         if self.isEmpty():
             print("Stack is empty, nothing to pop")
             return None
-        
+
         return self.Stack[-1]
 
     def isEmpty(self):
-        if(len(self.Stack) == 0):
-            print("This  array is a CEROU")
+        if len(self.Stack) == 0:
+            print("This array is empty")
             return True
-        else: 
-            return False
-        
+        return False
+
+    def toArray(self):
+        return list(self.Stack)
 
     def showStack(self):
         print(self.Stack)

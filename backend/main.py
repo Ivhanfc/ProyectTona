@@ -2,6 +2,7 @@ import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from app.routes.user_routes import router as user_router
 from app.routes.driver_routes import router as driver_router
+from app.routes.order_router import router as order_router
 from app.database import create_db_and_tables
 from contextlib import asynccontextmanager
 from typing import Dict
@@ -16,6 +17,7 @@ app = FastAPI(lifespan=lifespan)
     
 app.include_router(user_router, prefix="/api/v1", tags=["Users"]) # include the user router with prefix and tags to organize the endpoints in the documentation
 app.include_router(driver_router, prefix="/api/v1", tags=["Drivers"])
+app.include_router(order_router, prefix="/api", tags=["Orders"])
 
 app.websocket("/ws")
 
