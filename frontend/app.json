@@ -22,7 +22,7 @@
       "package": "com.fearjesteam.edward",
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyC7takF6D12i_1Nm_dtgeUevrWM1a_gi_g"
+          "apiKey": "TU_API_KEY_REAL_DE_GOOGLE"
         }
       }
     },
@@ -40,7 +40,12 @@
           "imageWidth": 76
         }
       ],
-      "expo-font"
+      [
+        "react-native-maps",
+        {
+          "androidGoogleMapsApiKey": "AIzaSyC7takF6D12i_1Nm_dtgeUevrWM1a_gi_g"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
