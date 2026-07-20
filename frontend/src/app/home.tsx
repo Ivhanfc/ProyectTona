@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator, Alert
 import MapView, { Marker, PROVIDER_GOOGLE,Polyline, Region, UrlTile} from 'react-native-maps';
 import * as Location from 'expo-location';
 import { MapPinned, UserCircle2, History, Package } from "lucide-react-native";
+import axios from "axios";
+
 const fallbackRegion: Region = {
   latitude: 19.4326,
 longitude: -99.1332,
@@ -47,7 +49,7 @@ function NodeMarker({
 export default function HomeScreen() {
     const [selectedTab, setSelectedTab] = useState<TabKey>('map');
     const courierMode = 'motorbike';
-
+    const UrlApi = process.env.API_URL;
     //states of ubication
     const [currentRegion, SetCurrentRegion] = useState<Region | null>(null);
     const [loadingLocation, setLoadingLocation] = useState<boolean>(true);
@@ -56,7 +58,8 @@ export default function HomeScreen() {
     const progress = useRef(new Animated.Value(0)).current;
     const [courierLoc, setCourierLoc] = useState({ latitude: fallbackRegion.latitude, longitude: fallbackRegion.longitude });
     const [eta, setEta] = useState(8);
-
+    
+   
     useEffect(() => {
         async function requestAndGetLocation(){
             try {
@@ -87,6 +90,7 @@ export default function HomeScreen() {
             latitude: userRegion.latitude + 0.004,
             longitude: userRegion.longitude - 0.004,
         });
+        console.log("latitude: ",userRegion.latitude, " longitude: ", userRegion.longitude)
  
         } catch(error) {
             Alert.alert('Error, not can get location of device');
@@ -99,13 +103,16 @@ export default function HomeScreen() {
     }, []);
 
     if (loadingLocation || !currentRegion) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#00a2ff" />
-        <Text style={styles.loadingText}>getting ubication GPS...</Text>
-      </View>
-    );
-  }
+       {/* 
+        return (
+          <View style={styles.center}>
+          <ActivityIndicator size="large" color="#00a2ff" />
+          <Text style={styles.loadingText}>getting ubication GPS...</Text>
+          </View>
+        );
+        */}
+      }
+             {/* 
 
         return (
             <View style={styles.container}>
@@ -125,6 +132,8 @@ export default function HomeScreen() {
 </MapView>
               </View>  
         )
+                      */}
+
     }
 
 const styles = StyleSheet.create({
