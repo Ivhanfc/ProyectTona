@@ -3,6 +3,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from app.routes.user_routes import router as user_router
 from app.routes.driver_routes import router as driver_router
 from app.routes.order_router import router as order_router
+from app.routes.restaurant_routes import router as restaurant_router
 from app.database import create_db_and_tables
 from contextlib import asynccontextmanager
 from typing import Dict
@@ -18,6 +19,7 @@ app = FastAPI(lifespan=lifespan)
 app.include_router(user_router, prefix="/api/v1", tags=["Users"]) # include the user router with prefix and tags to organize the endpoints in the documentation
 app.include_router(driver_router, prefix="/api/v1", tags=["Drivers"])
 app.include_router(order_router, prefix="/api", tags=["Orders"])
+app.include_router(restaurant_router, prefix="/api/v1", tags=["Restaurants"])  
 
 app.websocket("/ws")
 
@@ -76,7 +78,8 @@ async def ubication_realtime_handler(websocket: WebSocket, role: str, target_id:
         print("The client is disconnected")
     except Exception as e:
         print(f"{e}")     
-        
+    finally:
+        manager.disconnect(role, target_id)
 
 
 if __name__ == "__main__":

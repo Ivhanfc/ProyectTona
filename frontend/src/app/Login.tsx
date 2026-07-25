@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { Pizza, Mail, Eye, EyeOff, ArrowRight, User, Truck, Lock } from 'lucide-react-native';
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
   useFonts,
@@ -113,6 +114,11 @@ export default function LoginScreen() {
 
     try {
       const response = await axios.post(endpoint, payload);
+      const user_data = response.data;
+      const userId = user_data.id || user_data.user_id;
+      if (userId) {
+        await AsyncStorage.setItem('user_id', String(userId));
+      }
       const actionText = isRegisterMode ? 'registered' : 'logged in';
       const roleText = userRole === 'driver' ? 'Driver' : 'Customer';
       

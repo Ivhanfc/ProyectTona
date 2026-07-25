@@ -1,5 +1,10 @@
-from typing import Optional, List
+from typing import Optional, List, TYPE_CHECKING
 from sqlmodel import Field, SQLModel, Relationship
+
+if TYPE_CHECKING:
+    from app.models.user_model import UserModel
+    from app.models.driver_model import DriverModel
+    from app.models.restaurant_model import RestaurantModel
 
 class OrderModel(SQLModel, table=True): # this line define a class create a sql table same time
     __tablename__: str = 'orders' # type: ignore // the name of the table in the database is 'users'
@@ -9,7 +14,9 @@ class OrderModel(SQLModel, table=True): # this line define a class create a sql 
     
     user_id: int = Field(foreign_key="users.id")
     driver_id: Optional[int] = Field(default=None, foreign_key="drivers.id")
+    restaurant_id: int = Field(foreign_key="restaurants.id") 
+
 
     user: "UserModel" = Relationship(back_populates="orders")
     driver: Optional["DriverModel"] = Relationship(back_populates="orders")
-    
+    restaurant: Optional["RestaurantModel"] = Relationship(back_populates="orders") 
