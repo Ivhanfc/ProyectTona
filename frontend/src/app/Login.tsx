@@ -32,11 +32,11 @@ const apiUrl = 'http://192.168.1.73:8000'
 export default function LoginScreen() {
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [userRole, setUserRole] = useState('user');
-  
+
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  
+
   const [isUsernameFocused, setIsUsernameFocused] = useState(false);
   const [isEmailFocused, setIsEmailFocused] = useState(false);
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
@@ -102,15 +102,15 @@ export default function LoginScreen() {
 
     const payload = isRegisterMode
       ? {
-          username: username.trim(),
-          email: email.trim(),
-          password: password,
-          icon: null
-        }
+        username: username.trim(),
+        email: email.trim(),
+        password: password,
+        icon: null
+      }
       : {
-          email: email.trim(),
-          password: password
-        };
+        email: email.trim(),
+        password: password
+      };
 
     try {
       const response = await axios.post(endpoint, payload);
@@ -121,7 +121,7 @@ export default function LoginScreen() {
       }
       const actionText = isRegisterMode ? 'registered' : 'logged in';
       const roleText = userRole === 'driver' ? 'Driver' : 'Customer';
-      
+
       Alert.alert('Success', `Successfully ${actionText} as ${roleText}.`);
     } catch (error) {
       console.error('Authentication error:', error);
