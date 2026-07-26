@@ -7,6 +7,8 @@ from app.routes.restaurant_routes import router as restaurant_router
 from app.database import create_db_and_tables
 from contextlib import asynccontextmanager
 from typing import Dict
+from fastapi.middleware.cors import CORSMiddleware
+
 ##imports
 
 @asynccontextmanager
@@ -14,11 +16,23 @@ async def lifespan(app: FastAPI): ##create a new session with context and lifesp
     create_db_and_tables()
     yield
 
+
 app = FastAPI(lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # En desarrollo permitimos cualquier origen
+    allow_credentials=True,
+    allow_methods=["*"], # Permite GET, POST, PUT, DELETE, etc.
+    allow_headers=["*"],
+)
+
+
+
     
 app.include_router(user_router, prefix="/api/v1", tags=["Users"]) # include the user router with prefix and tags to organize the endpoints in the documentation
 app.include_router(driver_router, prefix="/api/v1", tags=["Drivers"])
-app.include_router(order_router, prefix="/api", tags=["Orders"])
+app.include_router(order_router, prefix="/api/v1", tags=["Orders"])
 app.include_router(restaurant_router, prefix="/api/v1", tags=["Restaurants"])  
 
 app.websocket("/ws")
