@@ -1,16 +1,40 @@
-import { Tabs } from 'expo-router';
-import { Home, History, List } from 'lucide-react-native'; // Ensure you have these icons installed
+import { Tabs, router } from 'expo-router';
+import { Home, History, List, LogOut } from 'lucide-react-native';
+import { TouchableOpacity, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function UserLayout() {
+    const handleLogout = async () => {
+        Alert.alert('Logout', 'Are you sure you want to log out?', [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Logout',
+                style: 'destructive',
+                onPress: async () => {
+                    await AsyncStorage.removeItem('user_id');
+                    await AsyncStorage.removeItem('user_role');
+                    router.replace('/Login');
+                }
+            }
+        ]);
+    };
+
     return (
-        <Tabs screenOptions={{ tabBarActiveTintColor: '#00a2ff' }}>
+        <Tabs screenOptions={{
+            tabBarActiveTintColor: '#00a2ff',
+            headerRight: () => (
+                <TouchableOpacity onPress={handleLogout} style={{ marginRight: 15 }}>
+                    <LogOut color="#ff4444" size={22} />
+                </TouchableOpacity>
+            )
+        }}>
             {/* Home Map Screen */}
             <Tabs.Screen
                 name="index"
                 options={{
                     title: 'Home',
                     tabBarIcon: ({ color }) => <Home color={color} size={24} />,
-                    headerShown: false,
+                    headerShown: true, // Show header so the logout button is visible!
                 }}
             />
             {/* Restaurants List Screen */}

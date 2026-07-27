@@ -16,6 +16,7 @@ import {
 import { Pizza, Mail, Eye, EyeOff, ArrowRight, User, Truck, Lock } from 'lucide-react-native';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router } from 'expo-router';
 
 import {
   useFonts,
@@ -118,11 +119,27 @@ export default function LoginScreen() {
       const userId = user_data.id || user_data.user_id;
       if (userId) {
         await AsyncStorage.setItem('user_id', String(userId));
+        await AsyncStorage.setItem('user_role', userRole);
       }
       const actionText = isRegisterMode ? 'registered' : 'logged in';
       const roleText = userRole === 'driver' ? 'Driver' : 'Customer';
 
-      Alert.alert('Success', `Successfully ${actionText} as ${roleText}.`);
+      Alert.alert(
+        'Success',
+        `Successfully ${isRegisterMode ? 'registered' : 'logged in'} as ${userRole === 'driver' ? 'Driver' : 'Customer'}.`,
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              if (userRole === 'driver') {
+                router.replace('/(driver)');
+              } else {
+                router.replace('/(user)');
+              }
+            }
+          }
+        ]
+      );
     } catch (error) {
       console.error('Authentication error:', error);
       if (error.response) {

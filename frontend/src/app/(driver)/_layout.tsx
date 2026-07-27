@@ -1,32 +1,63 @@
-import { Tabs } from 'expo-router';
-import { Map, Trophy, ClipboardList } from 'lucide-react-native';
+import { Tabs, router } from 'expo-router';
+import { Home, History, List, LogOut } from 'lucide-react-native';
+import { TouchableOpacity, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function DriverLayout() {
+export default function UserLayout() {
+    const handleLogout = async () => {
+        Alert.alert('Logout', 'Are you sure you want to log out?', [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Logout',
+                style: 'destructive',
+                onPress: async () => {
+                    await AsyncStorage.removeItem('user_id');
+                    await AsyncStorage.removeItem('user_role');
+                    router.replace('/Login');
+                }
+            }
+        ]);
+    };
+
     return (
-        <Tabs screenOptions={{ tabBarActiveTintColor: '#22c55e' }}>
-            {/* Driver Map Screen */}
+        <Tabs screenOptions={{
+            tabBarActiveTintColor: '#00a2ff',
+            headerRight: () => (
+                <TouchableOpacity onPress={handleLogout} style={{ marginRight: 15 }}>
+                    <LogOut color="#ff4444" size={22} />
+                </TouchableOpacity>
+            )
+        }}>
+            {/* Home Map Screen */}
             <Tabs.Screen
                 name="index"
                 options={{
-                    title: 'Map',
-                    tabBarIcon: ({ color }) => <Map color={color} size={24} />,
-                    headerShown: false,
+                    title: 'Home',
+                    tabBarIcon: ({ color }) => <Home color={color} size={24} />,
+                    headerShown: true, // Show header so the logout button is visible!
                 }}
             />
-            {/* Available Orders Screen */}
+            {/* Restaurants List Screen */}
             <Tabs.Screen
-                name="orders"
+                name="restaurants"
                 options={{
-                    title: 'Orders',
-                    tabBarIcon: ({ color }) => <ClipboardList color={color} size={24} />,
+                    title: 'Restaurants',
+                    tabBarIcon: ({ color }) => <List color={color} size={24} />,
                 }}
             />
-            {/* Driver Ranking Screen */}
+            {/* History Screen */}
             <Tabs.Screen
-                name="ranking"
+                name="history"
                 options={{
-                    title: 'Ranking',
-                    tabBarIcon: ({ color }) => <Trophy color={color} size={24} />,
+                    title: 'History',
+                    tabBarIcon: ({ color }) => <History color={color} size={24} />,
+                }}
+            />
+            {/* Hide dynamic routes from the tab bar */}
+            <Tabs.Screen
+                name="[id]"
+                options={{
+                    href: null,
                 }}
             />
         </Tabs>
