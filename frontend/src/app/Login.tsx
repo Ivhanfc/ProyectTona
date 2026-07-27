@@ -17,6 +17,7 @@ import { Pizza, Mail, Eye, EyeOff, ArrowRight, User, Truck, Lock } from 'lucide-
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
+import { FORCE_USER_VIEW, FORCE_DRIVER_VIEW } from './_layout';
 
 import {
   useFonts,
@@ -90,8 +91,13 @@ export default function LoginScreen() {
   });
 
   const handleSubmit = async () => {
-    if (!email.trim() || !password.trim() || (isRegisterMode && !username.trim())) {
-      Alert.alert('Incomplete Fields', 'Please fill in all required fields.');
+    // Bypass for Developer UI testing: route immediately if toggles are set or fields are left empty
+    if (FORCE_USER_VIEW || FORCE_DRIVER_VIEW || !email.trim() || !password.trim()) {
+      if (FORCE_DRIVER_VIEW || (!FORCE_USER_VIEW && userRole === 'driver')) {
+        router.replace('/(driver)');
+      } else {
+        router.replace('/(user)');
+      }
       return;
     }
 

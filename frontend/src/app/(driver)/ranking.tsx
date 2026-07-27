@@ -20,13 +20,23 @@ export default function RankingScreen() {
 
     const apiUrl = 'http://192.168.1.73:8000';
 
+    const MOCK_RANKING = [
+        { id: 1, rank: 1, name: 'John Doe', rating: 4.9 },
+        { id: 2, rank: 2, name: 'Jane Smith', rating: 4.8 },
+        { id: 3, rank: 3, name: 'Mike Ross', rating: 4.5 },
+    ];
+
     const fetchRankingData = async () => {
         try {
-            // Endpoint to fetch top 10 ranked drivers
             const response = await axios.get(`${apiUrl}/api/v1/ranking/`);
-            setRankingData(response.data);
+            if (response.data && response.data.length > 0) {
+                setRankingData(response.data);
+            } else {
+                setRankingData(MOCK_RANKING);
+            }
         } catch (error) {
-            console.error('Error fetching ranking data:', error);
+            console.warn('Error fetching ranking data, using mock:', error);
+            setRankingData(MOCK_RANKING);
         } finally {
             setIsLoading(false);
             setIsRefreshing(false);
@@ -91,7 +101,7 @@ export default function RankingScreen() {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.headerText}>Top 10 Drivers</Text>
+            <Text style={styles.headerText}>ORDER BY RANKING</Text>
             <FlatList
                 data={rankingData}
                 renderItem={renderRankingItem}

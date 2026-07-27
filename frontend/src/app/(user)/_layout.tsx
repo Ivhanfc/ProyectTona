@@ -37,11 +37,19 @@ export default function UserLayout() {
                     headerShown: true, // Show header so the logout button is visible!
                 }}
             />
-            {/* Restaurants List Screen */}
+            {/* Restaurants Ranking Screen */}
             <Tabs.Screen
-                name="restaurants"
+                name="ranking"
                 options={{
-                    title: 'Restaurants',
+                    title: 'Ranking',
+                    tabBarIcon: ({ color }) => <List color={color} size={24} />,
+                }}
+            />
+            {/* Action / Order Screen */}
+            <Tabs.Screen
+                name="action"
+                options={{
+                    title: 'Order',
                     tabBarIcon: ({ color }) => <List color={color} size={24} />,
                 }}
             />
@@ -51,13 +59,6 @@ export default function UserLayout() {
                 options={{
                     title: 'History',
                     tabBarIcon: ({ color }) => <History color={color} size={24} />,
-                }}
-            />
-            {/* Hide dynamic routes from the tab bar */}
-            <Tabs.Screen
-                name="[id]"
-                options={{
-                    href: null,
                 }}
             />
         </Tabs>

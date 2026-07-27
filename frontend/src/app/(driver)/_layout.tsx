@@ -3,7 +3,7 @@ import { Home, History, List, LogOut } from 'lucide-react-native';
 import { TouchableOpacity, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function UserLayout() {
+export default function DriverLayout() {
     const handleLogout = async () => {
         Alert.alert('Logout', 'Are you sure you want to log out?', [
             { text: 'Cancel', style: 'cancel' },
@@ -37,27 +37,20 @@ export default function UserLayout() {
                     headerShown: true, // Show header so the logout button is visible!
                 }}
             />
-            {/* Restaurants List Screen */}
+            {/* Drivers Ranking Screen */}
             <Tabs.Screen
-                name="restaurants"
+                name="ranking"
                 options={{
-                    title: 'Restaurants',
+                    title: 'Ranking',
                     tabBarIcon: ({ color }) => <List color={color} size={24} />,
                 }}
             />
-            {/* History Screen */}
+            {/* Select Order Screen */}
             <Tabs.Screen
-                name="history"
+                name="action"
                 options={{
-                    title: 'History',
-                    tabBarIcon: ({ color }) => <History color={color} size={24} />,
-                }}
-            />
-            {/* Hide dynamic routes from the tab bar */}
-            <Tabs.Screen
-                name="[id]"
-                options={{
-                    href: null,
+                    title: 'Select Order',
+                    tabBarIcon: ({ color }) => <List color={color} size={24} />,
                 }}
             />
         </Tabs>

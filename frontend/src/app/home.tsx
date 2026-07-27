@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator, Alert
 import MapView, { Marker, PROVIDER_GOOGLE, Polyline, Region, UrlTile } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { MapPinned, UserCircle2, History, Package, LayoutIcon } from "lucide-react-native";
-import { FeColorMatrix } from "react-native-svg";
+
 const fallbackRegion: Region = {
   latitude: 19.4326,
   longitude: -99.1332,
