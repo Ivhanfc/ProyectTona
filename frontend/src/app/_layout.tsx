@@ -4,8 +4,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect } from 'react';
 
 // AUTH BYPASS TOGGLES FOR DEVELOPER UI TESTING
-export const FORCE_USER_VIEW = false;   // Set to true to force user navigation stack
-export const FORCE_DRIVER_VIEW = true; // Set to true to force driver navigation stack
+export const FORCE_USER_VIEW = true;   // Set to true to force user navigation stack
+export const FORCE_DRIVER_VIEW = false; // Set to true to force driver navigation stack
 
 // Si clickeas continue sin llenar los campos te va a mandar al que sea true aqui, no importa si seleccionas customer o driver, si uno de esos esta true te manda directamente a esa vista Ivancito
 
@@ -29,7 +29,7 @@ export default function RootLayout() {
         if (!userId) {
           router.replace('/Login');
         } else {
-          router.replace(userRole === 'driver' ? '/(driver)' : '/(user)');
+          router.replace(userRole === 'driver' ? '/(driver)' : '/(user)'); // if userRole is driver, go to driver stack, else go to user stack
         }
       } catch (error) {
         console.error('Error during initial redirect:', error);

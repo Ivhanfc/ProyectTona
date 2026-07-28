@@ -22,7 +22,7 @@
       "package": "com.fearjesteam.edward",
       "config": {
         "googleMaps": {
-          "apiKey": "TU_API_KEY_REAL_DE_GOOGLE"
+          "apiKey": "AIzaSyC7takF6D12i_1Nm_dtgeUevrWM1a_gi_g"
         }
       }
     },
@@ -51,11 +51,10 @@
       "typedRoutes": true,
       "reactCompiler": true
     },
-    "owner": "kairodev1s-team",
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "56a70fa0-4702-4874-be93-74974a6e166e"
+        "projectId": "e2cb2110-e637-4618-b222-ebdf4fabbc7e"
       }
     }
   }

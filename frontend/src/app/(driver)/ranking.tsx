@@ -1,10 +1,7 @@
-// template uber raking top 10 with 5 stars
-
 import React, { useEffect, useState } from 'react';
 import {
     StyleSheet,
     Text,
-    TouchableOpacity,
     View,
     FlatList,
     ActivityIndicator,
@@ -13,14 +10,24 @@ import {
 import axios from 'axios';
 import { Star } from 'lucide-react-native';
 
+// 1. Defined the TypeScript Interface for the ranking data
+interface DriverRanking {
+    id: number;
+    rank: number;
+    name: string;
+    rating: number;
+}
+
 export default function RankingScreen() {
-    const [rankingData, setRankingData] = useState([]);
+    // 2. Passed the interface to the useState hook to prevent the never[] error
+    const [rankingData, setRankingData] = useState<DriverRanking[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
 
     const apiUrl = 'http://192.168.1.73:8000';
 
-    const MOCK_RANKING = [
+    // 3. Typed the mock data array
+    const MOCK_RANKING: DriverRanking[] = [
         { id: 1, rank: 1, name: 'John Doe', rating: 4.9 },
         { id: 2, rank: 2, name: 'Jane Smith', rating: 4.8 },
         { id: 3, rank: 3, name: 'Mike Ross', rating: 4.5 },
@@ -52,7 +59,6 @@ export default function RankingScreen() {
         fetchRankingData();
     };
 
-    // Helper function to render 5 stars dynamically based on driver rating
     const renderStars = (rating = 5) => {
         const stars = [];
         const fullStars = Math.floor(rating);
@@ -71,14 +77,13 @@ export default function RankingScreen() {
         return stars;
     };
 
-    const renderRankingItem = ({ item, index }) => (
+    // 4. Assigned the DriverRanking type to item, and number to index to fix the implicit 'any' error
+    const renderRankingItem = ({ item, index }: { item: DriverRanking; index: number }) => (
         <View style={styles.card}>
-            {/* Position / Rank badge */}
             <View style={styles.rankBadge}>
                 <Text style={styles.rankText}>#{item.rank || index + 1}</Text>
             </View>
 
-            {/* Driver details */}
             <View style={styles.driverInfo}>
                 <Text style={styles.nameText}>{item.name || 'Driver Name'}</Text>
                 <View style={styles.starsRow}>
@@ -120,7 +125,6 @@ export default function RankingScreen() {
     );
 }
 
-// Fixed: Added missing StyleSheet definition
 const styles = StyleSheet.create({
     container: {
         flex: 1,

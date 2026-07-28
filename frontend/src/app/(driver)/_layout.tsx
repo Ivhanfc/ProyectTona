@@ -1,6 +1,6 @@
 import { Tabs, router } from 'expo-router';
-import { Home, History, List, LogOut } from 'lucide-react-native';
-import { TouchableOpacity, Alert } from 'react-native';
+import { Home, History, List, LogOut, Car } from 'lucide-react-native';
+import { TouchableOpacity, Alert, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function DriverLayout() {
@@ -32,9 +32,15 @@ export default function DriverLayout() {
             <Tabs.Screen
                 name="index"
                 options={{
-                    title: 'Home',
+                    title: 'Driver Map',
                     tabBarIcon: ({ color }) => <Home color={color} size={24} />,
-                    headerShown: true, // Show header so the logout button is visible!
+                    headerShown: true,
+                    // Injecting your custom icon into the native header
+                    headerLeft: () => (
+                        <View style={{ marginLeft: 15 }}>
+                            <Car color="#00a2ff" size={24} />
+                        </View>
+                    )
                 }}
             />
             {/* Drivers Ranking Screen */}
