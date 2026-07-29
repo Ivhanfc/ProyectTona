@@ -19,7 +19,7 @@ export default function DriverQueueScreen() {
 
     const fetchPendingOrders = async () => {
         try {
-        const response = await fetch('http://192.168.1.73:8000/api/v1/orders/pending');
+            const response = await fetch('http://192.168.1.73:8000/api/v1/orders/pending');
             const data = await response.json();
             setQueue(data);
         } catch (error) {

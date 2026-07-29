@@ -2,6 +2,7 @@ from sqlmodel import Session, select
 from app.models.restaurant_model import RestaurantModel
 from app.core.security import get_password_hash, verify_password
 from app.schemas.restaurant_schema import RestaurantCreate, RestaurantRead, RestaurantUpdate
+from typing import List
 
 class RestaurantController:
     def create_new_restaurant(self, db: Session, restaunt_data: RestaurantCreate) -> RestaurantModel | None:

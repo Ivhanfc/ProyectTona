@@ -29,7 +29,7 @@ import {
 
 const { width } = Dimensions.get('window');
 const isLargeScreen = width > 480;
-const apiUrl = 'http://192.168.1.73:8000'
+const apiUrl = 'http://192.168.1.103:8000'
 
 export default function LoginScreen() {
   const [isRegisterMode, setIsRegisterMode] = useState(false);
@@ -91,13 +91,11 @@ export default function LoginScreen() {
   });
 
   const handleSubmit = async () => {
-    // Bypass for Developer UI testing: route immediately if toggles are set or fields are left empty
-    if (FORCE_USER_VIEW || FORCE_DRIVER_VIEW || !email.trim() || !password.trim()) {
-      if (FORCE_DRIVER_VIEW || (!FORCE_USER_VIEW && userRole === 'driver')) {
-        router.replace('/(driver)');
-      } else {
-        router.replace('/(user)');
-      }
+    if (!email.trim() || !password.trim() || (isRegisterMode && !username.trim())) {
+      Alert.alert(
+        'Incomplete Fields',
+        'Please fill in all the fields to continue.'
+      );
       return;
     }
 
@@ -122,17 +120,24 @@ export default function LoginScreen() {
     try {
       const response = await axios.post(endpoint, payload);
       const user_data = response.data;
+
       const userId = user_data.id || user_data.user_id;
+
       if (userId) {
+        // Save real credentials in phone memory
         await AsyncStorage.setItem('user_id', String(userId));
         await AsyncStorage.setItem('user_role', userRole);
+
+        // Save name to say "Hello, [Name]" in the view
+        const nameToSave = user_data.username || user_data.name || username;
+        if (nameToSave) {
+          await AsyncStorage.setItem('username', nameToSave);
+        }
       }
-      const actionText = isRegisterMode ? 'registered' : 'logged in';
-      const roleText = userRole === 'driver' ? 'Driver' : 'Customer';
 
       Alert.alert(
-        'Success',
-        `Successfully ${isRegisterMode ? 'registered' : 'logged in'} as ${userRole === 'driver' ? 'Driver' : 'Customer'}.`,
+        'Success!',
+        `Session started correctly as ${userRole === 'driver' ? 'Driver' : 'Customer'}.`,
         [
           {
             text: 'OK',
@@ -149,10 +154,12 @@ export default function LoginScreen() {
     } catch (error) {
       console.error('Authentication error:', error);
       if (error.response) {
-        const detail = error.response.data?.detail || 'An error occurred while processing your request.';
-        Alert.alert('Error', typeof detail === 'string' ? detail : JSON.stringify(detail));
+        // Enter here if the backend says "wrong password" or "user does not exist"
+        const detail = error.response.data?.detail || 'Something went wrong with your credentials.';
+        Alert.alert('Access Error', typeof detail === 'string' ? detail : JSON.stringify(detail));
       } else {
-        Alert.alert('Network Error', 'Could not connect to the backend server.');
+        // Enter here if your apiUrl IP is wrong or the backend is turned off
+        Alert.alert('Connection Error', 'Unable to connect to the server. Check that the backend is turned on and the IP is correct.');
       }
     } finally {
       setIsLoading(false);
