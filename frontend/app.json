@@ -7,6 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "frontend",
     "userInterfaceStyle": "automatic",
+    "owner": "kairodev1s-team",
     "ios": {
       "icon": "./assets/expo.icon",
       "bundleIdentifier": "com.fearjesteam.edward"
@@ -22,7 +23,7 @@
       "package": "com.fearjesteam.edward",
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyC7takF6D12i_1Nm_dtgeUevrWM1a_gi_g"
+          "apiKey": "AQUÍ_TU_API_KEY_REAL"
         }
       }
     },
@@ -54,7 +55,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "e2cb2110-e637-4618-b222-ebdf4fabbc7e"
+        "projectId": "56a70fa0-4702-4874-be93-74974a6e166e"
       }
     }
   }
