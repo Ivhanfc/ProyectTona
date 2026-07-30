@@ -7,6 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "frontend",
     "userInterfaceStyle": "automatic",
+    "owner": "kairodev1s-team",
     "ios": {
       "icon": "./assets/expo.icon",
       "bundleIdentifier": "com.fearjesteam.edward"
@@ -22,7 +23,7 @@
       "package": "com.fearjesteam.edward",
       "config": {
         "googleMaps": {
-          "apiKey": "TU_API_KEY_REAL_DE_GOOGLE"
+          "apiKey": "AQUÍ_TU_API_KEY_REAL"
         }
       }
     },
@@ -51,7 +52,6 @@
       "typedRoutes": true,
       "reactCompiler": true
     },
-    "owner": "kairodev1s-team",
     "extra": {
       "router": {},
       "eas": {

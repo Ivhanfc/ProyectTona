@@ -1,13 +1,14 @@
-from typing import Optional, List
-from sqlmodel import Field, SQLModel, Relationship
+from typing import Optional, List, TYPE_CHECKING
+from sqlmodel import Field, Relationship
+from app.schemas.driver_schema import DriverBase
 
-class DriverModel(SQLModel, table=True): # this line define a class create a sql table same time
+if TYPE_CHECKING:
+    from app.models.order_model import OrderModel
+
+class DriverModel(DriverBase, table=True): # this line define a class create a sql table same time
     __tablename__: str = 'drivers' # type: ignore // the name of the table in the database is 'drivers'
-
     id: Optional[int] = Field(default=None, primary_key=True)
-    username: str = Field(index=True, unique=True, max_length=50)
-    email: str = Field(unique=True, max_length=100)
-    bio: Optional[str] = Field(default=None, max_length=255)
+    hashed_password: str = Field(default=None)
     is_active: bool = Field(default=True)
     rating: float = Field(default=0.0)
 

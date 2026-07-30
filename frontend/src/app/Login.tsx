@@ -9,11 +9,16 @@ import {
   Platform,
   Dimensions,
   Animated,
-  ScrollView
+  ScrollView,
+  Alert,
+  ActivityIndicator
 } from 'react-native';
-import { Pizza, Mail, Eye, EyeOff, ArrowRight } from 'lucide-react-native';
+import { Pizza, Mail, Eye, EyeOff, ArrowRight, User, Truck, Lock } from 'lucide-react-native';
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router } from 'expo-router';
+import { FORCE_USER_VIEW, FORCE_DRIVER_VIEW } from './_layout';
 
-// --- IMPORTACIÓN DE FUENTES ---
 import {
   useFonts,
   Poppins_400Regular,
@@ -24,15 +29,22 @@ import {
 
 const { width } = Dimensions.get('window');
 const isLargeScreen = width > 480;
+const apiUrl = 'http://192.168.1.103:8000'
 
 export default function LoginScreen() {
+  const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [userRole, setUserRole] = useState('user');
+
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
+  const [isUsernameFocused, setIsUsernameFocused] = useState(false);
   const [isEmailFocused, setIsEmailFocused] = useState(false);
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // --- CARGA DE FUENTES ---
   let [fontsLoaded] = useFonts({
     Poppins_400Regular,
     Poppins_600SemiBold,
@@ -40,48 +52,118 @@ export default function LoginScreen() {
     Poppins_800ExtraBold,
   });
 
+  const usernameFocusAnim = useRef(new Animated.Value(0)).current;
   const emailFocusAnim = useRef(new Animated.Value(0)).current;
   const passwordFocusAnim = useRef(new Animated.Value(0)).current;
+  const roleToggleAnim = useRef(new Animated.Value(0)).current;
 
-  const handleEmailFocus = (focused) => {
-    setIsEmailFocused(focused);
-    Animated.timing(emailFocusAnim, {
+  const handleFocus = (anim, setFocused, focused) => {
+    setFocused(focused);
+    Animated.timing(anim, {
       toValue: focused ? 1 : 0,
       duration: 250,
       useNativeDriver: false,
     }).start();
   };
 
-  const handlePasswordFocus = (focused) => {
-    setIsPasswordFocused(focused);
-    Animated.timing(passwordFocusAnim, {
-      toValue: focused ? 1 : 0,
+  const handleRoleChange = (role) => {
+    setUserRole(role);
+    Animated.timing(roleToggleAnim, {
+      toValue: role === 'driver' ? 1 : 0,
       duration: 250,
       useNativeDriver: false,
     }).start();
   };
 
-  // Ajuste de colores para que contrasten bien contra la nueva tarjeta blanca
-  const emailBorderColor = emailFocusAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['#e2e8f0', '#00a2ff'] // Gris muy claro a azul
-  });
-  const emailBgColor = emailFocusAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['#f8fafc', '#ffffff'] // Gris súper sutil a blanco
-  });
-
-  const passBorderColor = passwordFocusAnim.interpolate({
+  const getAnimatedBorder = (anim) => anim.interpolate({
     inputRange: [0, 1],
     outputRange: ['#e2e8f0', '#00a2ff']
   });
-  const passBgColor = passwordFocusAnim.interpolate({
+
+  const getAnimatedBg = (anim) => anim.interpolate({
     inputRange: [0, 1],
     outputRange: ['#f8fafc', '#ffffff']
   });
 
-  const handleLogin = () => {
-    console.log('Intentando conectar al backend...', email, password);
+  const roleIndicatorPosition = roleToggleAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['2%', '50%']
+  });
+
+  const handleSubmit = async () => {
+    if (!email.trim() || !password.trim() || (isRegisterMode && !username.trim())) {
+      Alert.alert(
+        'Incomplete Fields',
+        'Please fill in all the fields to continue.'
+      );
+      return;
+    }
+
+    setIsLoading(true);
+
+    const entityPath = userRole === 'driver' ? 'drivers' : 'users';
+    const actionPath = isRegisterMode ? 'create_user' : 'login-user';
+    const endpoint = `${apiUrl}/api/v1/${entityPath}/${actionPath}/`;
+
+    const payload = isRegisterMode
+      ? {
+        username: username.trim(),
+        email: email.trim(),
+        password: password,
+        icon: null
+      }
+      : {
+        email: email.trim(),
+        password: password
+      };
+
+    try {
+      const response = await axios.post(endpoint, payload);
+      const user_data = response.data;
+
+      const userId = user_data.id || user_data.user_id;
+
+      if (userId) {
+        // Save real credentials in phone memory
+        await AsyncStorage.setItem('user_id', String(userId));
+        await AsyncStorage.setItem('user_role', userRole);
+
+        // Save name to say "Hello, [Name]" in the view
+        const nameToSave = user_data.username || user_data.name || username;
+        if (nameToSave) {
+          await AsyncStorage.setItem('username', nameToSave);
+        }
+      }
+
+      Alert.alert(
+        'Success!',
+        `Session started correctly as ${userRole === 'driver' ? 'Driver' : 'Customer'}.`,
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              if (userRole === 'driver') {
+                router.replace('/(driver)');
+              } else {
+                router.replace('/(user)');
+              }
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Authentication error:', error);
+      if (error.response) {
+        // Enter here if the backend says "wrong password" or "user does not exist"
+        const detail = error.response.data?.detail || 'Something went wrong with your credentials.';
+        Alert.alert('Access Error', typeof detail === 'string' ? detail : JSON.stringify(detail));
+      } else {
+        // Enter here if your apiUrl IP is wrong or the backend is turned off
+        Alert.alert('Connection Error', 'Unable to connect to the server. Check that the backend is turned on and the IP is correct.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!fontsLoaded) {
@@ -93,10 +175,8 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.container}
     >
-
       <View pointerEvents="none" style={[styles.bgCircle, { backgroundColor: '#c7edff', top: '-5%', left: '-20%', width: 300, height: 300 }]} />
       <View pointerEvents="none" style={[styles.bgCircle, { backgroundColor: '#00a2ff', bottom: '5%', right: '-30%', width: 350, height: 350 }]} />
-
 
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
@@ -115,49 +195,96 @@ export default function LoginScreen() {
                 style={{ transform: [{ rotate: '1deg' }], marginLeft: 8, marginTop: 4 }}
               />
             </View>
-            <Text style={styles.brandSubtitle}>Pedidos seguros, pide cuando quieras</Text>
+            <Text style={styles.brandSubtitle}>Orders and deliveries in one place</Text>
           </View>
 
           <View style={styles.formWrapper}>
-
-
             <View style={styles.solidCard}>
 
-              <View style={styles.blueGlassHeader}>
-                <Text style={styles.loginHeader}>Inicio de sesión</Text>
-                <Text style={styles.loginSubtext}>Ingresa tu correo electrónico y contraseña para continuar</Text>
+              <View style={styles.roleToggleContainer}>
+                <Animated.View style={[styles.roleIndicator, { left: roleIndicatorPosition }]} />
+                <TouchableOpacity
+                  style={styles.roleOption}
+                  activeOpacity={0.8}
+                  onPress={() => handleRoleChange('user')}
+                >
+                  <User size={18} color={userRole === 'user' ? '#00a2ff' : '#64748b'} />
+                  <Text style={[styles.roleText, userRole === 'user' && styles.roleTextActive]}>Customer</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.roleOption}
+                  activeOpacity={0.8}
+                  onPress={() => handleRoleChange('driver')}
+                >
+                  <Truck size={18} color={userRole === 'driver' ? '#00a2ff' : '#64748b'} />
+                  <Text style={[styles.roleText, userRole === 'driver' && styles.roleTextActive]}>Driver</Text>
+                </TouchableOpacity>
               </View>
 
-              <Text style={styles.inputLabel}>Correo electrónico</Text>
-              <Animated.View style={[styles.inputContainer, { borderColor: emailBorderColor, backgroundColor: emailBgColor }]}>
+              <View style={styles.blueGlassHeader}>
+                <Text style={styles.loginHeader}>
+                  {isRegisterMode ? 'Create Account' : 'Sign In'}
+                </Text>
+                <Text style={styles.loginSubtext}>
+                  {isRegisterMode
+                    ? `Register as a ${userRole === 'driver' ? 'driver' : 'customer'} to get started`
+                    : `Log in to your ${userRole === 'driver' ? 'driver' : 'customer'} account`}
+                </Text>
+              </View>
+
+              {isRegisterMode && (
+                <>
+                  <Text style={styles.inputLabel}>Username</Text>
+                  <Animated.View style={[styles.inputContainer, { borderColor: getAnimatedBorder(usernameFocusAnim), backgroundColor: getAnimatedBg(usernameFocusAnim) }]}>
+                    <User color={isUsernameFocused ? '#00a2ff' : '#94a3b8'} size={22} />
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="e.g. john_doe"
+                      placeholderTextColor="#94a3b8"
+                      autoCapitalize="none"
+                      value={username}
+                      onChangeText={setUsername}
+                      onFocus={() => handleFocus(usernameFocusAnim, setIsUsernameFocused, true)}
+                      onBlur={() => handleFocus(usernameFocusAnim, setIsUsernameFocused, false)}
+                      underlineColorAndroid="transparent"
+                      selectionColor="#00a2ff"
+                    />
+                  </Animated.View>
+                </>
+              )}
+
+              <Text style={styles.inputLabel}>Email address</Text>
+              <Animated.View style={[styles.inputContainer, { borderColor: getAnimatedBorder(emailFocusAnim), backgroundColor: getAnimatedBg(emailFocusAnim) }]}>
                 <Mail color={isEmailFocused ? '#00a2ff' : '#94a3b8'} size={22} />
                 <TextInput
                   style={styles.textInput}
-                  placeholder="ejemplo@correo.com"
+                  placeholder="example@mail.com"
                   placeholderTextColor="#94a3b8"
                   keyboardType="email-address"
                   autoCapitalize="none"
                   value={email}
                   onChangeText={setEmail}
-                  onFocus={() => handleEmailFocus(true)}
-                  onBlur={() => handleEmailFocus(false)}
+                  onFocus={() => handleFocus(emailFocusAnim, setIsEmailFocused, true)}
+                  onBlur={() => handleFocus(emailFocusAnim, setIsEmailFocused, false)}
                   underlineColorAndroid="transparent"
                   selectionColor="#00a2ff"
                 />
               </Animated.View>
 
-              <Text style={styles.inputLabel}>Contraseña</Text>
-              <Animated.View style={[styles.inputContainer, { borderColor: passBorderColor, backgroundColor: passBgColor }]}>
+              <Text style={styles.inputLabel}>Password</Text>
+              <Animated.View style={[styles.inputContainer, { borderColor: getAnimatedBorder(passwordFocusAnim), backgroundColor: getAnimatedBg(passwordFocusAnim) }]}>
+                <Lock color={isPasswordFocused ? '#00a2ff' : '#94a3b8'} size={22} />
                 <TextInput
                   style={styles.textInput}
-                  placeholder="Ingresa tu contraseña"
+                  placeholder="Enter your password"
                   placeholderTextColor="#94a3b8"
                   secureTextEntry={!isPasswordVisible}
                   autoCapitalize="none"
                   value={password}
                   onChangeText={setPassword}
-                  onFocus={() => handlePasswordFocus(true)}
-                  onBlur={() => handlePasswordFocus(false)}
+                  onFocus={() => handleFocus(passwordFocusAnim, setIsPasswordFocused, true)}
+                  onBlur={() => handleFocus(passwordFocusAnim, setIsPasswordFocused, false)}
                   underlineColorAndroid="transparent"
                   selectionColor="#00a2ff"
                 />
@@ -174,22 +301,44 @@ export default function LoginScreen() {
                 </TouchableOpacity>
               </Animated.View>
 
-              <TouchableOpacity style={styles.forgotPasswordContainer} activeOpacity={0.6}>
-                <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
-              </TouchableOpacity>
+              {!isRegisterMode && (
+                <TouchableOpacity style={styles.forgotPasswordContainer} activeOpacity={0.6}>
+                  <Text style={styles.forgotPasswordText}>Forgot your password?</Text>
+                </TouchableOpacity>
+              )}
 
-              <TouchableOpacity style={styles.loginButton} onPress={handleLogin} activeOpacity={0.8}>
-                <Text style={styles.loginButtonText}>Siguiente</Text>
-                <ArrowRight color="#FFFFFF" size={20} style={{ marginLeft: 8 }} />
+              <TouchableOpacity
+                style={[styles.loginButton, isLoading && styles.buttonDisabled]}
+                onPress={handleSubmit}
+                activeOpacity={0.8}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Text style={styles.loginButtonText}>
+                      {isRegisterMode ? 'Register' : 'Continue'}
+                    </Text>
+                    <ArrowRight color="#FFFFFF" size={20} style={{ marginLeft: 8 }} />
+                  </>
+                )}
               </TouchableOpacity>
 
             </View>
           </View>
 
           <View style={styles.footerContainer}>
-            <Text style={styles.footerText}>¿No tienes una cuenta? </Text>
-            <TouchableOpacity activeOpacity={0.6}>
-              <Text style={styles.registerLinkText}>Regístrate</Text>
+            <Text style={styles.footerText}>
+              {isRegisterMode ? 'Already have an account? ' : "Don't have an account? "}
+            </Text>
+            <TouchableOpacity
+              activeOpacity={0.6}
+              onPress={() => setIsRegisterMode(!isRegisterMode)}
+            >
+              <Text style={styles.registerLinkText}>
+                {isRegisterMode ? 'Sign In' : 'Sign Up'}
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -202,15 +351,15 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f1f5f9', // Fondo general un poco más oscuro para que contraste la tarjeta blanca
+    backgroundColor: '#f1f5f9',
   },
   scrollContainer: {
     flexGrow: 1,
-    justifyContent: 'center', // Centra el contenido verticalmente cuando hay espacio de sobra
+    justifyContent: 'center',
   },
   innerContainer: {
     flex: 1,
-    justifyContent: 'center', // Cambiado a center para evitar empujar elementos hacia los extremos
+    justifyContent: 'center',
     paddingHorizontal: 24,
     paddingTop: Platform.OS === 'ios' ? 70 : 60,
     paddingBottom: Platform.OS === 'ios' ? 40 : 30,
@@ -222,12 +371,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     borderRadius: 200,
     opacity: 0.35,
-    zIndex: .1,
+    zIndex: 0.1,
   },
   headerContainer: {
     alignSelf: 'flex-start',
     width: '100%',
-    marginBottom: 32,
+    marginBottom: 24,
   },
   brandRow: {
     flexDirection: 'row',
@@ -247,7 +396,7 @@ const styles = StyleSheet.create({
   },
   formWrapper: {
     width: '100%',
-    marginBottom: 32,
+    marginBottom: 24,
   },
   solidCard: {
     width: '100%',
@@ -256,36 +405,73 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#f1f5f9',
-
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.06,
     shadowRadius: 16,
     elevation: 4,
   },
+  roleToggleContainer: {
+    flexDirection: 'row',
+    height: 48,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 14,
+    padding: 4,
+    marginBottom: 20,
+    position: 'relative',
+  },
+  roleIndicator: {
+    position: 'absolute',
+    top: '10%',
+    width: '48%',
+    height: '80%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  roleOption: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 2,
+  },
+  roleText: {
+    fontSize: 14,
+    fontFamily: 'Poppins_600SemiBold',
+    color: '#64748b',
+    marginLeft: 6,
+  },
+  roleTextActive: {
+    color: '#00a2ff',
+  },
   blueGlassHeader: {
     backgroundColor: '#eff6ff',
     borderColor: '#bfdbfe',
     borderWidth: 1,
     borderRadius: 16,
-    paddingVertical: 16,
+    paddingVertical: 14,
     paddingHorizontal: 12,
-    marginBottom: 24,
+    marginBottom: 20,
     alignItems: 'center',
   },
   loginHeader: {
-    fontSize: 22,
+    fontSize: 20,
     fontFamily: 'Poppins_800ExtraBold',
     color: '#0f172a',
     marginBottom: 2,
     textAlign: 'center',
   },
   loginSubtext: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: 'Poppins_400Regular',
     color: '#475569',
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 18,
     paddingHorizontal: 8,
   },
   inputLabel: {
@@ -303,7 +489,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1.5,
     paddingHorizontal: 16,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   textInput: {
     flex: 1,
@@ -321,9 +507,9 @@ const styles = StyleSheet.create({
   },
   forgotPasswordContainer: {
     alignSelf: 'center',
-    marginTop: 4,
-    marginBottom: 28,
-    paddingVertical: 8,
+    marginTop: 2,
+    marginBottom: 20,
+    paddingVertical: 6,
   },
   forgotPasswordText: {
     color: '#0f172a',
@@ -336,13 +522,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#0f172a',
     borderRadius: 14,
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'center', // Fixed: replaced '.' with ':'
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 3,
+    marginTop: 8,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
   loginButtonText: {
     color: '#FFFFFF',

@@ -9,7 +9,7 @@ from sqlmodel import Session, select, SQLModel
 router = APIRouter()
 controller = DriverController()
 
-@router.post("/drivers/create_driver/", response_model=DriverModel, status_code=status.HTTP_201_CREATED) # connect the route with the controller method to create a new driver
+@router.post("/drivers/create_user/", response_model=DriverModel, status_code=status.HTTP_201_CREATED) # connect the route with the controller method to create a new driver
 def create_user(driver_in: DriverModel, db: Session = Depends(get_db)): #the method get_db is used to get database session 
     new_user = controller.create_new_driver(db=db, driver_data=driver_in) #the controlled method is called to create new driver in the controller class
 
@@ -23,6 +23,7 @@ def create_user(driver_in: DriverModel, db: Session = Depends(get_db)): #the met
 class DriverMinResponse(SQLModel): ## using a schema to return only the username and rating of the driver
     username: str
     rating : float
+
     
 @router.get("/drivers/get_best", response_model=List[DriverMinResponse]) ## this function is used to get the best drived based in the ratings return a schema with the username and rating of the driver 
 def get_best_drivers(db: Session = Depends(get_db)):
