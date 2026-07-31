@@ -108,7 +108,7 @@ export default function RankingScreen() {
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
 
-    const apiUrl = 'http://192.168.1.73:8000';
+    const apiUrl = 'http://192.168.1.103:8000';
 
     const fetchRankingData = async () => {
         try {

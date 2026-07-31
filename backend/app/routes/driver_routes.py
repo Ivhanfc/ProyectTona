@@ -5,12 +5,26 @@ from app.controllers.driver_Controller import DriverController
 from app.models.driver_model import DriverModel
 from app.database import get_db
 from sqlmodel import Session, select, SQLModel
+from app.schemas.user_schema import UserLogin
+from app.schemas.driver_schema import DriverCreate
 
 router = APIRouter()
 controller = DriverController()
 
+@router.post("/drivers/login-user/", response_model=DriverModel, status_code=status.HTTP_200_OK)
+def login_driver(login_data: UserLogin, db: Session = Depends(get_db)):
+    driver = controller.login_driver(db=db, email=login_data.email, password=login_data.password)
+    
+    if not driver:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password"
+        )
+    return driver
+
+
 @router.post("/drivers/create_user/", response_model=DriverModel, status_code=status.HTTP_201_CREATED) # connect the route with the controller method to create a new driver
-def create_user(driver_in: DriverModel, db: Session = Depends(get_db)): #the method get_db is used to get database session 
+def create_user(driver_in: DriverCreate, db: Session = Depends(get_db)): #the method get_db is used to get database session 
     new_user = controller.create_new_driver(db=db, driver_data=driver_in) #the controlled method is called to create new driver in the controller class
 
     if not new_user:
