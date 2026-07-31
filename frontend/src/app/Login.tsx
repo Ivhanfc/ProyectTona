@@ -57,7 +57,7 @@ export default function LoginScreen() {
   const passwordFocusAnim = useRef(new Animated.Value(0)).current;
   const roleToggleAnim = useRef(new Animated.Value(0)).current;
 
-  const handleFocus = (anim, setFocused, focused) => {
+  const handleFocus = (anim: Animated.Value, setFocused: (focused: boolean) => void, focused: boolean) => {
     setFocused(focused);
     Animated.timing(anim, {
       toValue: focused ? 1 : 0,
@@ -66,7 +66,7 @@ export default function LoginScreen() {
     }).start();
   };
 
-  const handleRoleChange = (role) => {
+  const handleRoleChange = (role: string) => {
     setUserRole(role);
     Animated.timing(roleToggleAnim, {
       toValue: role === 'driver' ? 1 : 0,
@@ -75,12 +75,12 @@ export default function LoginScreen() {
     }).start();
   };
 
-  const getAnimatedBorder = (anim) => anim.interpolate({
+  const getAnimatedBorder = (anim: Animated.Value) => anim.interpolate({
     inputRange: [0, 1],
     outputRange: ['#e2e8f0', '#00a2ff']
   });
 
-  const getAnimatedBg = (anim) => anim.interpolate({
+  const getAnimatedBg = (anim: Animated.Value) => anim.interpolate({
     inputRange: [0, 1],
     outputRange: ['#f8fafc', '#ffffff']
   });
@@ -153,7 +153,7 @@ export default function LoginScreen() {
       );
     } catch (error) {
       console.error('Authentication error:', error);
-      if (error.response) {
+      if (axios.isAxiosError(error) && error.response) {
         // Enter here if the backend says "wrong password" or "user does not exist"
         const detail = error.response.data?.detail || 'Something went wrong with your credentials.';
         Alert.alert('Access Error', typeof detail === 'string' ? detail : JSON.stringify(detail));
@@ -499,7 +499,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     marginLeft: 12,
     ...Platform.select({
-      web: { outlineStyle: 'none' },
+      web: { outlineStyle: 'none' as any },
     }),
   },
   eyeButton: {

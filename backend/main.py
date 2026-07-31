@@ -1,14 +1,14 @@
 import uvicorn
+import httpx
+from datetime import datetime
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 from app.routes.user_routes import router as user_router
 from app.routes.driver_routes import router as driver_router
 from app.routes.order_router import router as order_router
 from app.routes.restaurant_routes import router as restaurant_router
 from app.database import create_db_and_tables
 from contextlib import asynccontextmanager
-from typing import Dict
-from fastapi.middleware.cors import CORSMiddleware
-import httpx
 from typing import Dict, Optional
 ##imports
 
@@ -63,6 +63,7 @@ class TrackingManager:
     def __init__(self):
         self.active_drivers: Dict[str, WebSocket] = {}
         self.active_users: Dict[str, WebSocket] = {}
+        self.driver_locations: Dict[str, dict] = {}
 
     async def connect(self, websocket: WebSocket, role: str, target_id: str):
         await websocket.accept()
@@ -72,8 +73,11 @@ class TrackingManager:
             self.active_users[target_id] = websocket
 
     def disconnect(self, role: str, target_id: str):
-        if role == "driver" and target_id in self.active_drivers:
-            del self.active_drivers[target_id]
+        if role == "driver":
+            if target_id in self.active_drivers:
+                del self.active_drivers[target_id]
+            if target_id in self.driver_locations:
+                del self.driver_locations[target_id]
         elif role == "user" and target_id in self.active_users:
             del self.active_users[target_id]
         
@@ -89,6 +93,13 @@ class TrackingManager:
             await websocket.send_json(payload)
 
 manager = TrackingManager()
+
+@app.get("/api/v1/drivers/active-locations")
+def get_active_drivers_locations():
+    """
+    Endpoint used to consult active drivers coordinates in real-time.
+    """
+    return manager.driver_locations
 
 @app.websocket("/ws/{role}/{target_id}")
 async def ubication_realtime_handler(websocket: WebSocket, role: str, target_id: str):
@@ -110,6 +121,13 @@ async def ubication_realtime_handler(websocket: WebSocket, role: str, target_id:
                 dest_lon = data.get("dest_lon")
                 dest_lat = data.get("dest_lat")
 
+                if lon is not None and lat is not None:
+                    manager.driver_locations[target_id] = {
+                        "lat": lat,
+                        "lon": lon,
+                        "updated_at": datetime.now().isoformat()
+                    }
+
                 if lon is not None and lat is not None and user_id is not None:
                     print(lat,lon)
 
@@ -123,7 +141,7 @@ async def ubication_realtime_handler(websocket: WebSocket, role: str, target_id:
     except WebSocketDisconnect:
         print("The client is disconnected")
     except Exception as e:
-        print(f"{e}")     
+        print(f"WS Exception: {e}")     
     finally:
         manager.disconnect(role, target_id)
 
