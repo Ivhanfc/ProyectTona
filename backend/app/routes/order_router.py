@@ -9,7 +9,7 @@ router = APIRouter()
 controller = OrderController()
 
 
-@router.post("/create_order", response_model=OrderModel, status_code=status.HTTP_201_CREATED)
+@router.post("/orders/create_order", response_model=OrderModel, status_code=status.HTTP_201_CREATED)
 def create_order(order_data: OrderModel, db: Session = Depends(get_db)):
     """
     Crea un nuevo pedido validando la existencia previa del cliente (user_id) 
@@ -27,7 +27,7 @@ def create_order(order_data: OrderModel, db: Session = Depends(get_db)):
 
 
 # 2. Eliminar un pedido existente
-@router.delete("/{order_id}", status_code=status.HTTP_200_OK)
+@router.delete("/orders/{order_id}", status_code=status.HTTP_200_OK)
 def delete_order(order_id: int, db: Session = Depends(get_db)):
     """
     Elimina un pedido existente por su ID.
@@ -44,7 +44,7 @@ def delete_order(order_id: int, db: Session = Depends(get_db)):
 
 
 # 3. Aceptar un pedido (Asignar a un Conductor)
-@router.put("/{order_id}/accept", response_model=OrderModel, status_code=status.HTTP_200_OK)
+@router.put("/orders/{order_id}/accept", response_model=OrderModel, status_code=status.HTTP_200_OK)
 def accept_order(order_id: int, driver_id: int, db: Session = Depends(get_db)):
     """
     Asigna un pedido a un conductor y cambia su estado a 'accepted'.

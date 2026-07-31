@@ -2,6 +2,9 @@ import { Tabs, router } from 'expo-router';
 import { Home, History, List, LogOut, Compass } from 'lucide-react-native';
 import { TouchableOpacity, Alert, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import './components/CartShop' 
+import CartShopComponent from './components/CartShop';
+import { StyleSheet } from 'react-native';
 
 export default function UserLayout() {
     const handleLogout = async () => {
@@ -20,6 +23,8 @@ export default function UserLayout() {
     };
 
     return (
+        <View style={styles.container}>
+
         <Tabs screenOptions={{
             tabBarActiveTintColor: '#00a2ff',
             headerRight: () => (
@@ -50,7 +55,7 @@ export default function UserLayout() {
                     title: 'Ranking',
                     tabBarIcon: ({ color }) => <List color={color} size={24} />,
                 }}
-            />
+                />
             {/* Action / Order Screen */}
             <Tabs.Screen
                 name="action"
@@ -68,5 +73,15 @@ export default function UserLayout() {
                 }}
             />
         </Tabs>
+        <CartShopComponent 
+             
+            />
+        </View>
     );
+    
 }
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+    },
+});
