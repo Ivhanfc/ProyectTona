@@ -10,6 +10,7 @@ interface Order {
 }
 
 export default function DriverQueueScreen() {
+    const apiUrl = process.env.EXPO_PUBLIC_URLSERVER;
     const [queue, setQueue] = useState<Order[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
 
@@ -19,7 +20,7 @@ export default function DriverQueueScreen() {
 
     const fetchPendingOrders = async () => {
         try {
-            const response = await fetch('http://192.168.1.103:8000/api/v1/orders/pending');
+            const response = await fetch(`${apiUrl}/api/v1/orders/pending`);
             const data = await response.json();
             setQueue(data);
         } catch (error) {

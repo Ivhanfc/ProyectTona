@@ -11,7 +11,7 @@ import {
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const apiUrl = 'http://192.168.1.103:8000';
+const apiUrl = process.env.EXPO_PUBLIC_URLSERVER;
 
 const MOCK_HISTORY = [
     { id: 1, restaurant_name: 'Burger Master', created_at: '2026-07-25', status: 'Completed', total_amount: 100.00 },

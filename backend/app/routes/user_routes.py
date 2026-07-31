@@ -1,11 +1,11 @@
 from fastapi import APIRouter, HTTPException, Depends, status
-from typing import List
+from typing import List, Dict
 from app.controllers.user_Controller import UserController
 from app.models.user_model import UserModel
 from app.database import get_db
 from sqlmodel import Session
 from app.schemas.user_schema import UserCreate, UserResponse, UserLogin
-
+from app.controllers.order_Controller import OrderController
 router = APIRouter()
 controller = UserController()
 
@@ -30,3 +30,15 @@ def login_user(login_data: UserLogin, db: Session = Depends(get_db)):
             detail="Invalid email or password"
         )
     return user
+order_controller = OrderController()
+
+@router.get("/users/{user_id}/history", status_code=status.HTTP_200_OK)
+def history(user_id: int, db: Session = Depends(get_db)) -> Dict:
+    user_history = order_controller.get_user_order_history_stack(db=db, user_id=user_id)
+
+    if user_history is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User with id {user_id} does not exist or history could not be retrieved"
+        )
+    return user_history

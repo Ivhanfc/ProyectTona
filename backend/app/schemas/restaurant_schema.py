@@ -24,5 +24,18 @@ class RestaurantRead(SQLModel):
     is_active: bool
 
 class RestaurantMinResponse(SQLModel):
+    id: int
     name: str
     rating: float
+
+class MenuRead(SQLModel):
+    id: int
+    name: str
+    description: Optional[str] = None
+    price: float
+    restaurant_id: int
+
+class MenuCreate(SQLModel):
+    name: str
+    description: Optional[str] = None
+    price: float

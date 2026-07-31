@@ -3,6 +3,7 @@ from sqlmodel import Field, SQLModel, Relationship
 
 if TYPE_CHECKING:
     from app.models.order_model import OrderModel
+    from app.models.menu_model import MenuItemModel
 
 class RestaurantModel(SQLModel, table=True):
     __tablename__ = "restaurants"
@@ -16,3 +17,4 @@ class RestaurantModel(SQLModel, table=True):
     rating: float = Field(default=0.0)
         
     orders: List["OrderModel"] = Relationship(back_populates="restaurant")
+    menu_items: List["MenuItemModel"] = Relationship(back_populates="restaurant")

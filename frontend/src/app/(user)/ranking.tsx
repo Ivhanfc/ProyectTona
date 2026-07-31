@@ -6,19 +6,38 @@ import {
     ActivityIndicator,
     FlatList,
     Animated,
-    Dimensions
+    Image,
+    TouchableOpacity
 } from 'react-native';
 import { Star } from 'lucide-react-native';
 import api from '../../services/api';
+import axios from 'axios';
+import { useRouter } from 'expo-router';
 
 const MOCK_RANKINGS = [
-    { id: '1', name: 'Burger Master', rating: 4.5, description: 'Best burgers in town.' },
-    { id: '2', name: 'Pizza Palace', rating: 4.2, description: 'Authentic Italian pizza.' },
-    { id: '3', name: 'Sushi Zen', rating: 4.0, description: 'Fresh sushi everyday.' },
+    {
+        id: '1',
+        name: 'La Trattoria',
+        description: 'Authentic Italian pasta and wood-fired pizza.',
+        rating: 4.8,
+        imageUrl: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=400&q=80',
+    },
+    {
+        id: '2',
+        name: 'Sakura Sushi',
+        description: 'Fresh sashimi and traditional Japanese rolls.',
+        rating: 4.6,
+        imageUrl: '',
+    },
 ];
 
+type RankingItem = typeof MOCK_RANKINGS[0];
+
+const rawApiUrl = process.env.EXPO_PUBLIC_URLSERVER || '';
+const apiUrl = rawApiUrl.endsWith('/') ? rawApiUrl.slice(0, -1) : rawApiUrl;
+
 // Componente separado para manejar la animación individual de cada tarjeta
-const AnimatedRankingCard = ({ item, index }: { item: typeof MOCK_RANKINGS[0], index: number }) => {
+const AnimatedRankingCard = ({ item, index, onPress }: { item: RankingItem; index: number; onPress: (id: string) => void; }) => {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const translateY = useRef(new Animated.Value(50)).current;
 
@@ -27,7 +46,7 @@ const AnimatedRankingCard = ({ item, index }: { item: typeof MOCK_RANKINGS[0], i
             Animated.timing(fadeAnim, {
                 toValue: 1,
                 duration: 500,
-                delay: index * 150, // Efecto cascada
+                delay: index * 150,
                 useNativeDriver: true,
             }),
             Animated.spring(translateY, {
@@ -38,41 +57,49 @@ const AnimatedRankingCard = ({ item, index }: { item: typeof MOCK_RANKINGS[0], i
                 useNativeDriver: true,
             })
         ]).start();
-    }, []);
+    }, [fadeAnim, translateY, index]);
 
     return (
         <Animated.View
             style={[
-                styles.card,
                 { opacity: fadeAnim, transform: [{ translateY }] }
             ]}
         >
-            {/* Contenedor preparado para la imagen */}
-            <View style={styles.imagePlaceholder}>
-                <Text style={styles.placeholderIcon}>📸</Text>
-                {/* Cuando tengas tus imágenes, reemplaza el Text de arriba por:
-                <Image source={{ uri: item.imageUrl }} style={styles.image} /> */}
-            </View>
-
-            <View style={styles.cardContent}>
-                <View>
-                    <Text style={styles.title} numberOfLines={1}>{item.name}</Text>
-                    <Text style={styles.description} numberOfLines={2}>{item.description}</Text>
+            {/* El estilo 'card' va aquí adentro, en el TouchableOpacity */}
+            <TouchableOpacity 
+                style={styles.card} 
+                activeOpacity={0.8}
+                onPress={() => onPress(item.id)}
+            >
+                <View style={styles.imagePlaceholder}>
+                    {item.imageUrl ? (
+                        <Image source={{ uri: item.imageUrl }} style={styles.image} />
+                    ) : (
+                        <Text style={styles.placeholderIcon}>📸</Text>
+                    )}
                 </View>
-                <View style={styles.ratingContainer}>
-                    <View style={styles.ratingBadge}>
-                        <Star color="#F59E0B" size={14} fill="#F59E0B" />
-                        <Text style={styles.ratingText}>{item.rating.toFixed(1)}</Text>
+
+                <View style={styles.cardContent}>
+                    <View>
+                        <Text style={styles.title} numberOfLines={1}>{item.name}</Text>
+                        <Text style={styles.description} numberOfLines={2}>{item.description}</Text>
+                    </View>
+                    <View style={styles.ratingContainer}>
+                        <View style={styles.ratingBadge}>
+                            <Star color="#F59E0B" size={14} fill="#F59E0B" />
+                            <Text style={styles.ratingText}>{item.rating.toFixed(1)}</Text>
+                        </View>
                     </View>
                 </View>
-            </View>
+            </TouchableOpacity>
         </Animated.View>
     );
 };
 
 export default function UserRankingScreen() {
-    const [rankings, setRankings] = useState(MOCK_RANKINGS);
-    const [isLoading, setIsLoading] = useState(true); // Cambiado a true por defecto para simular carga inicial
+    const [rankings, setRankings] = useState<RankingItem[]>(MOCK_RANKINGS);
+    const [isLoading, setIsLoading] = useState(true);
+    const router = useRouter();
 
     useEffect(() => {
         fetchRankings();
@@ -80,16 +107,21 @@ export default function UserRankingScreen() {
 
     const fetchRankings = async () => {
         try {
-            const response = await api.get('/restaurants/ranking/');
+            const endpoint = apiUrl ? `${apiUrl}/api/v1/restaurants/get_best` : '/restaurants/ranking/';
+            const response = await axios.get(endpoint);
+
             if (response.data && response.data.length > 0) {
                 setRankings(response.data);
             }
         } catch (error: any) {
             console.warn('Endpoint is not connected yet, using mock ranking data instead:', error.message);
         } finally {
-            // Simulamos un pequeño delay para que se aprecie la animación si los datos llegan muy rápido
             setTimeout(() => setIsLoading(false), 300);
         }
+    };
+
+    const handleSelectRestaurant = (restaurantId: string) => {
+        router.push(`/action?restaurant_id=${restaurantId}`);
     };
 
     if (isLoading) {
@@ -109,8 +141,14 @@ export default function UserRankingScreen() {
 
             <FlatList
                 data={rankings}
-                keyExtractor={(item) => item.id}
-                renderItem={({ item, index }) => <AnimatedRankingCard item={item} index={index} />}
+                keyExtractor={(item) => item.id.toString()}
+                renderItem={({ item, index }) => (
+                    <AnimatedRankingCard 
+                        item={item} 
+                        index={index} 
+                        onPress={handleSelectRestaurant}
+                    />
+                )}
                 contentContainerStyle={styles.listContent}
                 showsVerticalScrollIndicator={false}
             />
@@ -131,7 +169,7 @@ const styles = StyleSheet.create({
     },
     headerContainer: {
         paddingHorizontal: 24,
-        paddingTop: 60, // Adjust according to your SafeArea
+        paddingTop: 60,
         paddingBottom: 24,
         backgroundColor: '#F8FAFC',
     },
@@ -157,12 +195,10 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         padding: 12,
         marginBottom: 16,
-        // Elegant shadows for iOS
         shadowColor: '#64748B',
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.08,
         shadowRadius: 12,
-        // Shadow for Android
         elevation: 4,
     },
     imagePlaceholder: {
@@ -175,7 +211,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         overflow: 'hidden',
     },
-
     image: {
         width: '100%',
         height: '100%',
@@ -208,7 +243,7 @@ const styles = StyleSheet.create({
     ratingBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#FEF3C7', // Fondo sutil amarillo
+        backgroundColor: '#FEF3C7',
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 8,
@@ -216,7 +251,7 @@ const styles = StyleSheet.create({
     ratingText: {
         fontSize: 13,
         fontWeight: '700',
-        color: '#B45309', // Texto ámbar oscuro para contraste
+        color: '#B45309',
         marginLeft: 4,
     },
 });

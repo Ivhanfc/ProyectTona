@@ -8,18 +8,33 @@ import {
     TouchableOpacity,
     Animated
 } from 'react-native';
-// Asumiendo que usas lucide-react-native como en tu otro archivo
 import { Plus } from 'lucide-react-native';
 import api from '../../services/api';
+import { useLocalSearchParams } from 'expo-router'; 
 
-const MOCK_FOOD_ITEMS = [
-    { id: '1', name: 'Cheeseburger Combo', price: '$250', description: 'Includes fries and drink' },
-    { id: '2', name: 'Family Pizza Combo', price: '$350', description: '2 Large Pizzas + Soda' },
-    { id: '3', name: 'Sushi Platter', price: '$100', description: '12 pieces assorted' },
+// Definición de Interfaz TypeScript para evitar conflictos de tipos
+interface MenuItem {
+    id: number | string;
+    name: string;
+    description: string;
+    price: number | string;
+}
+
+const MOCK_FOOD_ITEMS: MenuItem[] = [
+    { id: '1', name: 'Cheeseburger Combo', price: 250, description: 'Includes fries and drink' },
+    { id: '2', name: 'Family Pizza Combo', price: 350, description: '2 Large Pizzas + Soda' },
+    { id: '3', name: 'Sushi Platter', price: 100, description: '12 pieces assorted' },
 ];
 
-// Componente animado independiente para cada tarjeta del menú
-const AnimatedFoodCard = ({ item, index }: { item: typeof MOCK_FOOD_ITEMS[0], index: number }) => {
+// Función helper para formatear precios adecuadamente
+const formatPrice = (price: number | string) => {
+    if (typeof price === 'number') {
+        return `$${price.toFixed(2)}`;
+    }
+    return price.startsWith('$') ? price : `$${price}`;
+};
+
+const AnimatedFoodCard = ({ item, index }: { item: MenuItem, index: number }) => {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const translateY = useRef(new Animated.Value(50)).current;
 
@@ -28,7 +43,7 @@ const AnimatedFoodCard = ({ item, index }: { item: typeof MOCK_FOOD_ITEMS[0], in
             Animated.timing(fadeAnim, {
                 toValue: 1,
                 duration: 500,
-                delay: index * 120, // Cascada un poco más rápida
+                delay: index * 120,
                 useNativeDriver: true,
             }),
             Animated.spring(translateY, {
@@ -48,11 +63,8 @@ const AnimatedFoodCard = ({ item, index }: { item: typeof MOCK_FOOD_ITEMS[0], in
                 { opacity: fadeAnim, transform: [{ translateY }] }
             ]}
         >
-            {/* Contenedor preparado para la imagen */}
             <View style={styles.imagePlaceholder}>
                 <Text style={styles.placeholderIcon}>🍔</Text>
-                {/* Cuando tengas las imágenes reales, reemplaza el Text de arriba por esto:
-                <Image source={{ uri: item.imageUrl }} style={styles.image} /> */}
             </View>
 
             <View style={styles.cardContent}>
@@ -62,8 +74,8 @@ const AnimatedFoodCard = ({ item, index }: { item: typeof MOCK_FOOD_ITEMS[0], in
                 </View>
 
                 <View style={styles.priceRow}>
-                    <Text style={styles.price}>{item.price}</Text>
-                    {/* Botón de agregar (le da un toque mucho más premium a la UI) */}
+                    {/* ✅ Mapeo seguro del precio */}
+                    <Text style={styles.price}>{formatPrice(item.price)}</Text>
                     <TouchableOpacity style={styles.addButton} activeOpacity={0.7}>
                         <Plus color="#FFFFFF" size={16} strokeWidth={3} />
                     </TouchableOpacity>
@@ -74,23 +86,28 @@ const AnimatedFoodCard = ({ item, index }: { item: typeof MOCK_FOOD_ITEMS[0], in
 };
 
 export default function UserActionScreen() {
-    const [foodItems, setFoodItems] = useState(MOCK_FOOD_ITEMS);
-    const [isLoading, setIsLoading] = useState(true); // En true para apreciar la primera carga
+    const [foodItems, setFoodItems] = useState<MenuItem[]>(MOCK_FOOD_ITEMS);
+    const [isLoading, setIsLoading] = useState(true);
+    const { restaurant_id } = useLocalSearchParams();
 
     useEffect(() => {
-        fetchFoodItems();
-    }, []);
+        if (restaurant_id) {
+            fetchFoodItems();
+        }
+    }, [restaurant_id]);
 
     const fetchFoodItems = async () => {
         try {
-            const response = await api.get('/restaurants/menu/');
-            if (response.data && response.data.length > 0) {
+            const response = await api.get(`/restaurants/${restaurant_id}/menu`);
+            console.log('Respuesta real de la API:', response.data);
+
+            // Verificamos que sea un array y no esté vacío
+            if (Array.isArray(response.data) && response.data.length > 0) {
                 setFoodItems(response.data);
             }
         } catch (error: any) {
-            console.warn('Endpoint is not connected yet, using mock menu data instead:', error.message);
+            console.warn('Error cargando menú:', error.message);
         } finally {
-            // Un pequeño delay simulado para que se luzca la animación
             setTimeout(() => setIsLoading(false), 300);
         }
     };
@@ -112,7 +129,8 @@ export default function UserActionScreen() {
 
             <FlatList
                 data={foodItems}
-                keyExtractor={(item) => item.id}
+                // ✅ Convertimos id a String obligatoriamente
+                keyExtractor={(item) => String(item.id)}
                 renderItem={({ item, index }) => <AnimatedFoodCard item={item} index={index} />}
                 contentContainerStyle={styles.listContent}
                 showsVerticalScrollIndicator={false}
@@ -160,12 +178,10 @@ const styles = StyleSheet.create({
         borderRadius: 24,
         padding: 12,
         marginBottom: 16,
-        // Sombra iOS
         shadowColor: '#64748B',
         shadowOffset: { width: 0, height: 10 },
         shadowOpacity: 0.08,
         shadowRadius: 16,
-        // Sombra Android
         elevation: 5,
     },
     imagePlaceholder: {
@@ -176,12 +192,7 @@ const styles = StyleSheet.create({
         marginRight: 16,
         justifyContent: 'center',
         alignItems: 'center',
-        overflow: 'hidden', // Clave para que la imagen respete los bordes curvos
-    },
-    image: {
-        width: '100%',
-        height: '100%',
-        resizeMode: 'cover',
+        overflow: 'hidden',
     },
     placeholderIcon: {
         fontSize: 36,

@@ -29,7 +29,7 @@ import {
 
 const { width } = Dimensions.get('window');
 const isLargeScreen = width > 480;
-const apiUrl = 'http://192.168.1.103:8000'
+const apiUrl = process.env.EXPO_PUBLIC_URLSERVER;
 
 export default function LoginScreen() {
   const [isRegisterMode, setIsRegisterMode] = useState(false);

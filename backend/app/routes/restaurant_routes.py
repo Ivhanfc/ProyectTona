@@ -2,8 +2,9 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 
+from app.schemas.restaurant_schema import MenuCreate # Asegúrate de importar el esquema de creación de menú
 from app.database import get_db
-from app.schemas.restaurant_schema import RestaurantCreate, RestaurantRead, RestaurantUpdate, RestaurantMinResponse
+from app.schemas.restaurant_schema import RestaurantCreate, RestaurantRead, RestaurantUpdate, RestaurantMinResponse, MenuRead
 from app.controllers.Restaurant_Controller import RestaurantController
 from app.models.restaurant_model import RestaurantModel
 
@@ -75,3 +76,27 @@ def delete_restaurant(restaurant_id: int, db: Session = Depends(get_db)):
         )
     return None
 
+@router.get("/{restaurant_id}/menu", response_model=List[MenuRead]) # O el esquema que uses para el menú
+def get_restaurant_menu(restaurant_id: int, db: Session = Depends(get_db)):
+    # Lógica para buscar los platillos del restaurante con ese ID
+    menu_items = restaurant_controller.get_menu_by_restaurant_id(db, restaurant_id)
+    return menu_items
+
+
+@router.post("/{restaurant_id}/menu", response_model=MenuRead, status_code=status.HTTP_201_CREATED)
+def create_menu_item(restaurant_id: int, menu_data: MenuCreate, db: Session = Depends(get_db)):
+    # Validar que el restaurante exista primero opcionalmente
+    restaurant = restaurant_controller.get_restaurant_by_id(db, restaurant_id)
+    if not restaurant:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Restaurante con id {restaurant_id} no encontrado."
+        )
+    
+    new_item = restaurant_controller.create_menu_item_for_restaurant(db, restaurant_id, menu_data)
+    if not new_item:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No se pudo crear el platillo en el menú."
+        )
+    return new_item

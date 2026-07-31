@@ -3,13 +3,14 @@ from app.models.restaurant_model import RestaurantModel
 from app.core.security import get_password_hash, verify_password
 from app.schemas.restaurant_schema import RestaurantCreate, RestaurantRead, RestaurantUpdate
 from typing import List
+from app.models.menu_model import MenuItemModel
 
 class RestaurantController:
-    def create_new_restaurant(self, db: Session, restaunt_data: RestaurantCreate) -> RestaurantModel | None:
+    def create_new_restaurant(self, db: Session, restaurant_data: RestaurantCreate) -> RestaurantModel | None:
          try:
               statement = select(RestaurantModel).where(
-                   (RestaurantModel.name == restaunt_data.name) &
-                   (RestaurantModel.address == restaunt_data.address)
+                   (RestaurantModel.name == restaurant_data.name) &
+                   (RestaurantModel.address == restaurant_data.address)
               )
               existing_restaurant = db.exec(statement).first()
 
@@ -17,7 +18,7 @@ class RestaurantController:
                 print(f"Error: A restaurant with name '{restaurant_data.name}' at this address already exists.")
                 return None
 
-              restaurant_dict = restaunt_data.model_dump()
+              restaurant_dict = restaurant_data.model_dump()
               db_restaurant = RestaurantModel(**restaurant_dict)
 
               db.add(db_restaurant)
@@ -53,7 +54,6 @@ class RestaurantController:
                 print(f"Restaurant with id {restaurant_id} does not exist.")
                 return None
 
-            # Extraemos los campos modificados descartando los no enviados
             update_dict = update_data.model_dump(exclude_unset=True)
             for key, value in update_dict.items():
                 setattr(db_restaurant, key, value)
@@ -85,4 +85,25 @@ class RestaurantController:
             print(f"Error in delete_restaurant: {e}")
             return False
 
-    
+    def get_menu_by_restaurant_id(self, db: Session, restaurant_id: int):
+        try:
+            statement = select(MenuItemModel).where(MenuItemModel.restaurant_id == restaurant_id)
+            return list(db.exec(statement).all())
+        except Exception as e:
+            print(f"Error in get_menu_by_restaurant_id: {e}")
+            return []
+
+    def create_menu_item_for_restaurant(self, db: Session, restaurant_id: int, menu_data):
+        try:
+            menu_dict = menu_data.model_dump()
+            db_menu_item = MenuItemModel(**menu_dict, restaurant_id=restaurant_id)
+
+            db.add(db_menu_item)
+            db.commit()
+            db.refresh(db_menu_item)
+
+            return db_menu_item
+        except Exception as e:
+            db.rollback()
+            print(f"Error in create_menu_item_for_restaurant: {e}")
+            return None

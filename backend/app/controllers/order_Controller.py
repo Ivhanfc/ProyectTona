@@ -50,7 +50,7 @@ class OrderController: ## this controller is responsible for handling the busine
             print(f"Error in delete order: {e}")
             return False 
         
-    def get_user_order_history_stack(self, db: Session, user_id: int) -> dict | None:
+    def get_user_order_history_stack(self, db: Session, user_id: int) -> Optional[Dict[str, Any]]:
         try:
             user = db.get(UserModel, user_id)
             if not user:
@@ -64,19 +64,25 @@ class OrderController: ## this controller is responsible for handling the busine
             )
             orders = db.exec(statement).all()
 
-            history_Stack = Stackk()
-            for order in orders:
-                history_Stack.push(order)
+            # Serialize the orders safely into a list of dictionaries
+            serialized_orders = [
+                order.model_dump() if hasattr(order, "model_dump") else order.__dict__ 
+                for order in orders
+            ]
 
             return {
-                "user": user,
-                "order_history": history_Stack
+                "user": {
+                    "id": user.id,
+                    "username": user.username,
+                    "email": user.email,
+                },
+                "order_history": serialized_orders
             }
 
         except Exception as e:
             print(f"Error in get_user_order_history_stack: {e}")
             return None
-    
+        
     def get_pending_orders_queue(self, db: Session) -> Queuee:
         try:
             statement = (
