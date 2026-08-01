@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Location from 'expo-location';
 import { ShoppingBag, ChevronRight } from 'lucide-react-native';
 
 interface CartItem {
@@ -26,23 +28,62 @@ export default function CartShopComponent({ items = [], restaurantId = 2, onClea
     const handleCreateOrder = async () => {
         setIsSubmitting(true);
         try {
+            // 1. Fetch real logged-in User ID safely
+            const storedUserId = await AsyncStorage.getItem('user_id');
+            console.log("CartShop submitting order with user_id:", storedUserId);
+            if (!storedUserId || storedUserId === undefined || storedUserId === "undefined" || storedUserId === null || storedUserId === "null") {
+                Alert.alert(
+                    "Session Invalid",
+                    "Your User ID was not found in local storage. Please log out and sign back in."
+                );
+                setIsSubmitting(false);
+                return;
+            }
+
+            const parsedUserId = Number(storedUserId);
+
+            // 2. Fetch User GPS Coordinates
+            let latitude = 32.5149;
+            let longitude = -117.0382;
+
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            if (status === 'granted') {
+                const currentLocation = await Location.getCurrentPositionAsync({
+                    accuracy: Location.Accuracy.Balanced,
+                });
+                latitude = currentLocation.coords.latitude;
+                longitude = currentLocation.coords.longitude;
+            } else {
+                console.warn('Location permission denied. Using default coordinates.');
+            }
+
+            // 3. Format dynamic description from cart items
+            const itemsDescription = items
+                .map((item) => `${item.quantity}x ${item.name}`)
+                .join(', ');
+
+            // 4. Build payload matching OrderCreate schema
             const orderPayload = {
-                description: `Pedido (${totalCount} productos)`,
-                status: "pending",
-                user_id: 1,        
-                restaurant_id: restaurantId, 
-                driver_id: null
+                description: itemsDescription || `Order (${totalCount} items)`,
+                user_id: parsedUserId,
+                restaurant_id: restaurantId,
+                latitude: latitude,
+                longitude: longitude
             };
 
-            const response = await axios.post(`${apiUrl}/api/v1/orders/create_order`, orderPayload);
-            console.log('Orden creada con éxito:', response.data);
-            Alert.alert('¡Éxito!', 'Tu pedido ha sido enviado correctamente.');
+            // 5. Send POST request
+            const endpoint = `${apiUrl}/api/v1/orders/create_order`;
+            const response = await axios.post(endpoint, orderPayload);
+
+            console.log('Order created successfully:', response.data);
+            Alert.alert('Success!', 'Your order has been sent. A nearby driver will see it on their map shortly.');
+
             if (onClearCart) {
                 onClearCart();
             }
         } catch (error: any) {
-            console.error('Error al crear la orden:', error.message);
-            Alert.alert('Error', 'No se pudo procesar la orden. Inténtalo de nuevo.');
+            console.error('Error creating order:', error.response?.data || error.message);
+            Alert.alert('Error', 'Could not process the order. Please try again.');
         } finally {
             setIsSubmitting(false);
         }
@@ -54,8 +95,8 @@ export default function CartShopComponent({ items = [], restaurantId = 2, onClea
 
     return (
         <View style={styles.floatingWrapper}>
-            <TouchableOpacity 
-                style={styles.cartBar} 
+            <TouchableOpacity
+                style={styles.cartBar}
                 onPress={handleCreateOrder}
                 disabled={isSubmitting}
                 activeOpacity={0.85}
@@ -64,7 +105,7 @@ export default function CartShopComponent({ items = [], restaurantId = 2, onClea
                     <View style={styles.badge}>
                         <Text style={styles.badgeText}>{totalCount}</Text>
                     </View>
-                    <Text style={styles.cartTitle}>Ver / Confirmar Pedido</Text>
+                    <Text style={styles.cartTitle}>View / Confirm Order</Text>
                 </View>
 
                 <View style={styles.rightSection}>
@@ -81,12 +122,12 @@ export default function CartShopComponent({ items = [], restaurantId = 2, onClea
 }
 
 const styles = StyleSheet.create({
-  floatingWrapper: {
+    floatingWrapper: {
         position: 'absolute',
-        bottom: 80, 
+        bottom: 80,
         left: 16,
         right: 16,
-        zIndex: 999, 
+        zIndex: 999,
     },
     cartBar: {
         backgroundColor: '#0F172A',
@@ -108,7 +149,7 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     badge: {
-        backgroundColor: '#10B981', 
+        backgroundColor: '#10B981',
         borderRadius: 20,
         minWidth: 26,
         height: 26,

@@ -13,13 +13,30 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const apiUrl = process.env.EXPO_PUBLIC_URLSERVER;
 
-const MOCK_HISTORY = [
-    { id: 1, restaurant_name: 'Burger Master', created_at: '2026-07-25', status: 'Completed', total_amount: 100.00 },
-    { id: 2, restaurant_name: 'Pizza Palace', created_at: '2026-07-24', status: 'Completed', total_amount: 200.00 },
-    { id: 3, restaurant_name: 'Sushi Zen', created_at: '2026-07-20', status: 'Completed', total_amount: 155.00 },
-];
+interface OrderItem {
+    id: number;
+    description?: string;
+    created_at?: string;
+    status: string;
+}
 
-const AnimatedHistoryCard = ({ item, index }) => {
+const formatDate = (isoString?: string) => {
+    if (!isoString) return 'Recent order';
+    try {
+        const date = new Date(isoString);
+        return date.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    } catch {
+        return 'Recent order';
+    }
+};
+
+const AnimatedHistoryCard = ({ item, index }: { item: OrderItem; index: number }) => {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const translateY = useRef(new Animated.Value(50)).current;
 
@@ -41,7 +58,8 @@ const AnimatedHistoryCard = ({ item, index }) => {
         ]).start();
     }, []);
 
-    const isCompleted = item.status === 'Completed';
+    const isCompleted = item.status?.toLowerCase() === 'completed';
+    const isAccepted = item.status?.toLowerCase() === 'accepted';
 
     return (
         <Animated.View style={[styles.card, { opacity: fadeAnim, transform: [{ translateY }] }]}>
@@ -50,30 +68,30 @@ const AnimatedHistoryCard = ({ item, index }) => {
             </View>
 
             <View style={styles.cardDetails}>
-                <Text style={styles.restaurantName} numberOfLines={1}>
-                    {item.restaurant_name || 'Restaurant Order'}
+                <Text style={styles.restaurantName} numberOfLines={2}>
+                    {item.description || `Order #${item.id}`}
                 </Text>
                 <Text style={styles.dateText}>
-                    {item.created_at ? new Date(item.created_at).toLocaleDateString() : 'Recent order'}
+                    {formatDate(item.created_at)}
                 </Text>
-                <View style={[styles.statusBadge, isCompleted ? styles.statusCompleted : styles.statusPending]}>
-                    <Text style={[styles.statusText, isCompleted ? styles.textCompleted : styles.textPending]}>
-                        {item.status || 'Completed'}
+                <View style={[
+                    styles.statusBadge,
+                    isCompleted ? styles.statusCompleted : isAccepted ? styles.statusAccepted : styles.statusPending
+                ]}>
+                    <Text style={[
+                        styles.statusText,
+                        isCompleted ? styles.textCompleted : isAccepted ? styles.textAccepted : styles.textPending
+                    ]}>
+                        {item.status ? item.status.toUpperCase() : 'PENDING'}
                     </Text>
                 </View>
-            </View>
-
-            <View style={styles.priceContainer}>
-                <Text style={styles.priceText}>
-                    ${item.total_amount ? item.total_amount.toFixed(2) : '0.00'}
-                </Text>
             </View>
         </Animated.View>
     );
 };
 
 export default function HistoryScreen() {
-    const [historyOrders, setHistoryOrders] = useState([]);
+    const [historyOrders, setHistoryOrders] = useState<OrderItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -84,15 +102,17 @@ export default function HistoryScreen() {
     const fetchOrderHistory = async () => {
         try {
             const userId = await AsyncStorage.getItem('user_id');
-            const response = await axios.get(`${apiUrl}/api/v1/users/${userId}/history/`);
-            if (response.data && response.data.length > 0) {
-                setHistoryOrders(response.data);
-            } else {
-                setHistoryOrders(MOCK_HISTORY);
+            if (!userId) {
+                setIsLoading(false);
+                return;
             }
-        } catch (error) {
-            console.warn('Error fetching order history, using mock:', error);
-            setHistoryOrders(MOCK_HISTORY);
+
+            const response = await axios.get(`${apiUrl}/api/v1/orders/history/${userId}`);
+            if (Array.isArray(response.data)) {
+                setHistoryOrders(response.data);
+            }
+        } catch (error: any) {
+            console.warn('Error fetching order history:', error.message);
         } finally {
             setIsLoading(false);
             setIsRefreshing(false);
@@ -121,7 +141,7 @@ export default function HistoryScreen() {
 
             {historyOrders.length === 0 ? (
                 <View style={styles.center}>
-                    <Text style={styles.emptyText}>No order history.</Text>
+                    <Text style={styles.emptyText}>No order history available.</Text>
                 </View>
             ) : (
                 <FlatList
@@ -208,13 +228,13 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     restaurantName: {
-        fontSize: 16,
+        fontSize: 15,
         fontWeight: '700',
         color: '#0F172A',
         marginBottom: 4,
     },
     dateText: {
-        fontSize: 13,
+        fontSize: 12,
         color: '#64748B',
         marginBottom: 8,
     },
@@ -227,28 +247,24 @@ const styles = StyleSheet.create({
     statusCompleted: {
         backgroundColor: '#D1FAE5',
     },
+    statusAccepted: {
+        backgroundColor: '#E0F2FE',
+    },
     statusPending: {
         backgroundColor: '#FEF3C7',
     },
     statusText: {
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: '700',
     },
     textCompleted: {
         color: '#059669',
     },
+    textAccepted: {
+        color: '#0284C7',
+    },
     textPending: {
         color: '#D97706',
-    },
-    priceContainer: {
-        justifyContent: 'center',
-        alignItems: 'flex-end',
-        paddingLeft: 12,
-    },
-    priceText: {
-        fontSize: 18,
-        fontWeight: '800',
-        color: '#0F172A',
     },
     emptyText: {
         fontSize: 16,

@@ -17,7 +17,6 @@ import { Pizza, Mail, Eye, EyeOff, ArrowRight, User, Truck, Lock } from 'lucide-
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-import { FORCE_USER_VIEW, FORCE_DRIVER_VIEW } from './_layout';
 
 import {
   useFonts,
@@ -94,7 +93,7 @@ export default function LoginScreen() {
     if (!email.trim() || !password.trim() || (isRegisterMode && !username.trim())) {
       Alert.alert(
         'Incomplete Fields',
-        'Please fill in all the fields to continue.'
+        'Please fill in all the required fields to continue.'
       );
       return;
     }
@@ -102,42 +101,68 @@ export default function LoginScreen() {
     setIsLoading(true);
 
     const entityPath = userRole === 'driver' ? 'drivers' : 'users';
-    const actionPath = isRegisterMode ? 'create_user' : 'login-user';
-    const endpoint = `${apiUrl}/api/v1/${entityPath}/${actionPath}/`;
-
-    const payload = isRegisterMode
-      ? {
-        username: username.trim(),
-        email: email.trim(),
-        password: password,
-        icon: null
-      }
-      : {
-        email: email.trim(),
-        password: password
-      };
 
     try {
-      const response = await axios.post(endpoint, payload);
-      const user_data = response.data;
+      let userData: any = null;
 
-      const userId = user_data.id || user_data.user_id;
+      if (isRegisterMode) {
+        // Step 1: Create Account
+        const createEndpoint = `${apiUrl}/api/v1/${entityPath}/create_user/`;
+        const createPayload = {
+          username: username.trim(),
+          email: email.trim(),
+          password: password,
+          icon: null
+        };
+        const createRes = await axios.post(createEndpoint, createPayload);
+        userData = createRes.data;
 
-      if (userId) {
-        // Save real credentials in phone memory
-        await AsyncStorage.setItem('user_id', String(userId));
-        await AsyncStorage.setItem('user_role', userRole);
-
-        // Save name to say "Hello, [Name]" in the view
-        const nameToSave = user_data.username || user_data.name || username;
-        if (nameToSave) {
-          await AsyncStorage.setItem('username', nameToSave);
+        // Step 2: Auto-login after registration if ID wasn't returned
+        if (!userData || (!userData.id && !userData.user_id)) {
+          const loginEndpoint = `${apiUrl}/api/v1/${entityPath}/login-user/`;
+          const loginRes = await axios.post(loginEndpoint, {
+            email: email.trim(),
+            password: password
+          });
+          userData = loginRes.data;
         }
+      } else {
+        // Direct Login
+        const loginEndpoint = `${apiUrl}/api/v1/${entityPath}/login-user/`;
+        const loginRes = await axios.post(loginEndpoint, {
+          email: email.trim(),
+          password: password
+        });
+        userData = loginRes.data;
       }
+
+      const resolvedUserId = userData?.id || userData?.user_id;
+
+      console.log("=== AUTH DEBUG ===");
+      console.log("Server Response User Data:", userData);
+      console.log("Extracted User ID:", resolvedUserId);
+
+
+      if (!resolvedUserId) {
+        Alert.alert(
+          "Authentication Error",
+          "The server did not return a valid user ID. please try signing in again."
+        );
+        setIsLoading(false);
+        return;
+      }
+
+      // Persist the verified ID to devide storage
+
+      await AsyncStorage.multiSet([
+        ["user_id", String(resolvedUserId)],
+        ["user_role", userRole],
+        ["user_name", userData.username || username.trim()]
+      ]);
 
       Alert.alert(
         'Success!',
-        `Session started correctly as ${userRole === 'driver' ? 'Driver' : 'Customer'}.`,
+        `Session started successfully as ${userRole === 'driver' ? 'Driver' : 'Customer'}.`,
         [
           {
             text: 'OK',
@@ -151,15 +176,32 @@ export default function LoginScreen() {
           }
         ]
       );
-    } catch (error) {
-      console.error('Authentication error:', error);
+    } catch (error: any) {
+      // Use console.warn instead of console.error to avoid triggerring Expo's red banner
+      console.warn('Authentication status:', error.message);
+
       if (axios.isAxiosError(error) && error.response) {
-        // Enter here if the backend says "wrong password" or "user does not exist"
-        const detail = error.response.data?.detail || 'Something went wrong with your credentials.';
-        Alert.alert('Access Error', typeof detail === 'string' ? detail : JSON.stringify(detail));
+        const detail = error.response.data?.detail;
+        let userFriendlyMsg = 'Something went wrong with your request.';
+
+        // Handle FastAPI 422 Validation Arrays
+        if (Array.isArray(detail) && detail.length > 0) {
+          const errItem = detail[0];
+          if (errItem.type === 'string_too_short' && errItem.loc?.includes('password')) {
+            userFriendlyMsg = 'Password must be at least 8 characters long.';
+          } else if (errItem.msg) {
+            userFriendlyMsg = errItem.msg;
+          }
+        } else if (typeof detail === 'string') {
+          userFriendlyMsg = detail;
+        }
+
+        Alert.alert('Registration Error', userFriendlyMsg);
       } else {
-        // Enter here if your apiUrl IP is wrong or the backend is turned off
-        Alert.alert('Connection Error', 'Unable to connect to the server. Check that the backend is turned on and the IP is correct.');
+        Alert.alert(
+          'Connection Error',
+          'Unable to connect to the server. Please check your network or server status.'
+        );
       }
     } finally {
       setIsLoading(false);
@@ -522,7 +564,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#0f172a',
     borderRadius: 14,
     flexDirection: 'row',
-    justifyContent: 'center', // Fixed: replaced '.' with ':'
+    justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },

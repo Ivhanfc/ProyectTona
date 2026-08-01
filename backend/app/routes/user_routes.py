@@ -20,16 +20,17 @@ def create_user(user_in: UserCreate, db: Session = Depends(get_db)): ##returning
         )
     return new_user
 
-@router.post("/users/login-user/", response_model=UserResponse, status_code=status.HTTP_200_OK) ## this router connect to the controller method to login a user in the database
+@router.post("/users/login-user/", response_model=UserResponse)
 def login_user(login_data: UserLogin, db: Session = Depends(get_db)):
     user = controller.login_user(db=db, email=login_data.email, password=login_data.password)
-    
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password"
         )
-    return user
+    return user  
+
+
 order_controller = OrderController()
 
 @router.get("/users/{user_id}/history", status_code=status.HTTP_200_OK)

@@ -7,6 +7,8 @@ from app.database import get_db
 from sqlmodel import Session, select, SQLModel
 from app.schemas.user_schema import UserLogin
 from app.schemas.driver_schema import DriverCreate
+from sqlmodel import Session, select
+from app.models.order_model import OrderModel
 
 router = APIRouter()
 controller = DriverController()
@@ -59,29 +61,25 @@ def get_best_drivers(db: Session = Depends(get_db)):
     return driver_list ## return the list of drivers sorted by rating
 
     # Route called by React Native's fetchMapPins()
+# backend/app/routes/driver_routes.py
+from sqlmodel import Session, select
+from app.models.order_model import OrderModel
+
 @router.get("/drivers/nearby_orders/")
 def get_nearby_orders(db: Session = Depends(get_db)):
-    """
-    Returns nearby orders for active drivers.
-    Currently returns a placeholder list until order placement is linked.
-    """
-    # Mock data until order placement is linked
-    nearby_orders = [
+    # Query database for unassigned pending orders
+    statement = select(OrderModel).where(OrderModel.driver_id == None, OrderModel.status == "pending")
+    pending_orders = db.exec(statement).all()
+
+    # Format list for driver map pins
+    return [
         {
-            "id": 1,
-            "name": "Order #101",
-            "latitude": 32.5149,
-            "longitude": -117.0382,
-            "status": "Ready",
-            "distance": "0.4 km"
-        },
-        {
-            "id": 2,
-            "name": "Order #102",
-            "latitude": 32.5165,
-            "longitude": -117.0398,
-            "status": "Preparing",
-            "distance": "0.9 km"
+            "id": order.id,
+            "name": f"Order #{order.id}: {order.description or 'Food Order'}",
+            "latitude": order.latitude,
+            "longitude": order.longitude,
+            "status": order.status.capitalize(),
+            "distance": "0.5 km"
         }
+        for order in pending_orders
     ]
-    return nearby_orders

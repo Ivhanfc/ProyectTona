@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View, ActivityIndicator, Dimensions, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { MapPin, Wifi, WifiOff } from 'lucide-react-native';
+import { MapPin, Wifi, WifiOff, CheckCircle } from 'lucide-react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import api from '../../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -8,14 +8,19 @@ import * as Location from 'expo-location';
 
 const { width } = Dimensions.get('window');
 
-const MOCK_DRIVER_PINS = [
-    { id: 1, name: 'Order #101', latitude: 32.5149, longitude: -117.0382, status: 'Ready', distance: '0.4 km' },
-    { id: 2, name: 'Order #102', latitude: 32.5165, longitude: -117.0398, status: 'Preparing', distance: '0.9 km' },
-];
+interface OrderPin {
+    id: number;
+    name: string;
+    latitude: number;
+    longitude: number;
+    status: string;
+    distance: string;
+}
 
 export default function DriverHomeScreen() {
-    const [mapData, setMapData] = useState(MOCK_DRIVER_PINS);
+    const [mapData, setMapData] = useState<OrderPin[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [acceptingOrderId, setAcceptingOrderId] = useState<number | null>(null);
 
     // Active conductor mode status states
     const [isActive, setIsActive] = useState<boolean>(false);
@@ -58,7 +63,6 @@ export default function DriverHomeScreen() {
         const startTrackingAndWebsocket = async () => {
             if (!isActive || !driverId) return;
 
-            // WebSocket Connection
             try {
                 const apiBase = api.defaults.baseURL || '';
                 const wsBase = apiBase
@@ -87,7 +91,6 @@ export default function DriverHomeScreen() {
                 console.error('WebSocket setup error:', err);
             }
 
-            // Start GPS Tracking
             try {
                 sub = await Location.watchPositionAsync(
                     {
@@ -97,7 +100,6 @@ export default function DriverHomeScreen() {
                     },
                     (location) => {
                         const { latitude, longitude } = location.coords;
-                        console.log(`Tracking location: Lat: ${latitude}, Lon: ${longitude}`);
 
                         if (isMounted) {
                             setCurrentCoords({ latitude, longitude });
@@ -123,12 +125,8 @@ export default function DriverHomeScreen() {
 
         return () => {
             isMounted = false;
-            if (ws) {
-                ws.close();
-            }
-            if (sub) {
-                sub.remove();
-            }
+            if (ws) ws.close();
+            if (sub) sub.remove();
         };
     }, [isActive, driverId]);
 
@@ -148,13 +146,6 @@ export default function DriverHomeScreen() {
 
             setIsActive(nextState);
             await AsyncStorage.setItem('driver_active_status', nextState ? 'on' : 'off');
-
-            Alert.alert(
-                nextState ? 'Modo Activo Iniciado' : 'Modo Activo Desactivado',
-                nextState
-                    ? 'Estás en línea. Tu ubicación ahora se comparte en tiempo real para recibir pedidos.'
-                    : 'Estás fuera de línea. Has dejado de compartir tu ubicación.'
-            );
         } catch (error) {
             console.error('Error toggling active state:', error);
         }
@@ -163,19 +154,38 @@ export default function DriverHomeScreen() {
     const fetchMapPins = async () => {
         try {
             const response = await api.get('/drivers/nearby_orders/');
-            if (response.data && response.data.length > 0) {
+            if (response.data) {
                 setMapData(response.data);
             }
         } catch (error: any) {
-            console.warn('Endpoint not connected yet, using mock driver pin data instead.');
+            console.warn('Error fetching nearby orders:', error.message);
         } finally {
             setIsLoading(false);
         }
     };
 
+    const handleAcceptOrder = async (orderId: number) => {
+        if (!driverId) {
+            Alert.alert("Error", "No se encontró el ID del conductor.");
+            return;
+        }
+
+        setAcceptingOrderId(orderId);
+        try {
+            // PUT request to accept order endpoint
+            await api.put(`/orders/${orderId}/accept?driver_id=${driverId}`);
+            Alert.alert("¡Pedido Aceptado!", `Has aceptado la orden #${orderId}.`);
+            fetchMapPins(); // Refresh map pins to clear the accepted order
+        } catch (error: any) {
+            console.error("Error al aceptar pedido:", error.response?.data || error.message);
+            Alert.alert("Error", "No se pudo aceptar la orden. Puede que ya haya sido tomada.");
+        } finally {
+            setAcceptingOrderId(null);
+        }
+    };
+
     return (
         <View style={styles.container}>
-            {/* Interactive Google Map */}
             <View style={styles.mapArea}>
                 <MapView
                     provider={PROVIDER_GOOGLE}
@@ -184,7 +194,7 @@ export default function DriverHomeScreen() {
                     showsUserLocation={true}
                     showsMyLocationButton={true}
                 >
-                    {mapData.map((pin) => ( // por ahora los datos son mock porque el endpoint no esta conectado, mock quiere decir datos falsos para probar
+                    {mapData.map((pin) => (
                         <Marker
                             key={pin.id}
                             coordinate={{ latitude: pin.latitude, longitude: pin.longitude }}
@@ -197,7 +207,6 @@ export default function DriverHomeScreen() {
                         </Marker>
                     ))}
 
-                    {/* Driver's own location representation with pulse ring */}
                     {isActive && currentCoords && (
                         <Marker
                             coordinate={currentCoords}
@@ -212,7 +221,7 @@ export default function DriverHomeScreen() {
                     )}
                 </MapView>
 
-                {/* Floating Active Status Toggle Button */}
+                {/* Floating Active Toggle Button */}
                 <View style={styles.floatingContainer}>
                     <TouchableOpacity
                         activeOpacity={0.85}
@@ -223,11 +232,7 @@ export default function DriverHomeScreen() {
                         ]}
                     >
                         <View style={styles.activeIconWrapper}>
-                            {isActive ? (
-                                <Wifi color="#ffffff" size={20} />
-                            ) : (
-                                <WifiOff color="#ffffff" size={20} />
-                            )}
+                            {isActive ? <Wifi color="#ffffff" size={20} /> : <WifiOff color="#ffffff" size={20} />}
                         </View>
                         <View style={styles.activeTextWrapper}>
                             <Text style={styles.activeLabel}>Modo Conductor</Text>
@@ -243,17 +248,38 @@ export default function DriverHomeScreen() {
                 </View>
             </View>
 
-            {/* Bottom info section */}
+            {/* Bottom Orders Section with Action Buttons */}
             <View style={styles.infoSection}>
-                <Text style={styles.infoTitle}>Orders nearby</Text>
+                <Text style={styles.infoTitle}>Ordenes Disponibles ({mapData.length})</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.carousel}>
-                    {mapData.map((pin) => (
-                        <View key={pin.id} style={styles.infoCard}>
-                            <MapPin color="#00a2ff" size={18} />
-                            <Text style={styles.infoCardName}>{pin.name}</Text>
-                            <Text style={styles.infoCardSub}>{pin.status} • {pin.distance}</Text>
-                        </View>
-                    ))}
+                    {mapData.length === 0 ? (
+                        <Text style={styles.emptyText}>No hay pedidos pendientes por el momento.</Text>
+                    ) : (
+                        mapData.map((pin) => (
+                            <View key={pin.id} style={styles.infoCard}>
+                                <View style={styles.cardHeader}>
+                                    <MapPin color="#00a2ff" size={16} />
+                                    <Text style={styles.infoCardName} numberOfLines={1}>{pin.name}</Text>
+                                </View>
+                                <Text style={styles.infoCardSub}>{pin.status} • {pin.distance}</Text>
+
+                                <TouchableOpacity
+                                    style={styles.acceptButton}
+                                    onPress={() => handleAcceptOrder(pin.id)}
+                                    disabled={acceptingOrderId === pin.id}
+                                >
+                                    {acceptingOrderId === pin.id ? (
+                                        <ActivityIndicator color="#FFFFFF" size="small" />
+                                    ) : (
+                                        <>
+                                            <CheckCircle color="#FFFFFF" size={14} style={{ marginRight: 4 }} />
+                                            <Text style={styles.acceptButtonText}>Aceptar</Text>
+                                        </>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                        ))
+                    )}
                 </ScrollView>
             </View>
         </View>
@@ -268,101 +294,40 @@ const styles = StyleSheet.create({
     infoSection: { padding: 20, backgroundColor: '#ffffff', borderTopWidth: 1, borderColor: '#e2e8f0' },
     infoTitle: { fontSize: 15, fontWeight: '700', color: '#0f172a', marginBottom: 12 },
     carousel: { flexDirection: 'row' },
+    emptyText: { color: '#94a3b8', fontSize: 13, fontStyle: 'italic', paddingVertical: 10 },
     infoCard: {
         backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0',
-        borderRadius: 12, padding: 12, marginRight: 12, width: 140,
-        alignItems: 'flex-start', gap: 4,
+        borderRadius: 16, padding: 12, marginRight: 12, width: 170,
+        justifyContent: 'space-between',
     },
-    infoCardName: { fontSize: 13, fontWeight: 'bold', color: '#0f172a' },
-    infoCardSub: { fontSize: 11, color: '#64748b' },
+    cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    infoCardName: { fontSize: 13, fontWeight: 'bold', color: '#0f172a', flex: 1 },
+    infoCardSub: { fontSize: 11, color: '#64748b', marginVertical: 6 },
+    acceptButton: {
+        backgroundColor: '#10b981', borderRadius: 10, paddingVertical: 8,
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 4,
+    },
+    acceptButtonText: { color: '#FFFFFF', fontWeight: '700', fontSize: 12 },
 
-    // Premium Active Mode Button Styles
-    floatingContainer: {
-        position: 'absolute',
-        top: 20,
-        left: 20,
-        right: 20,
-        zIndex: 10,
-    },
+    floatingContainer: { position: 'absolute', top: 20, left: 20, right: 20, zIndex: 10 },
     activeButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        borderRadius: 20,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.15,
-        shadowRadius: 10,
-        elevation: 6,
-        borderWidth: 1,
+        flexDirection: 'row', alignItems: 'center', paddingVertical: 12,
+        paddingHorizontal: 16, borderRadius: 20, borderWidth: 1, elevation: 6,
     },
-    activeButtonOn: {
-        backgroundColor: '#10b981',
-        borderColor: '#059669',
-    },
-    activeButtonOff: {
-        backgroundColor: '#475569',
-        borderColor: '#334155',
-    },
-    activeIconWrapper: {
-        marginRight: 12,
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        borderRadius: 12,
-        padding: 8,
-    },
-    activeTextWrapper: {
-        flex: 1,
-    },
-    activeLabel: {
-        fontSize: 10,
-        fontWeight: '600',
-        color: 'rgba(255, 255, 255, 0.8)',
-        textTransform: 'uppercase',
-        letterSpacing: 0.8,
-    },
-    activeStatusText: {
-        fontSize: 15,
-        fontWeight: 'bold',
-        color: '#ffffff',
-        letterSpacing: 0.5,
-    },
-    indicatorDot: {
-        width: 12,
-        height: 12,
-        borderRadius: 6,
-        borderWidth: 2,
-        borderColor: '#ffffff',
-    },
-    indicatorDotOn: {
-        backgroundColor: '#34d399',
-    },
-    indicatorDotOff: {
-        backgroundColor: '#94a3b8',
-    },
+    activeButtonOn: { backgroundColor: '#10b981', borderColor: '#059669' },
+    activeButtonOff: { backgroundColor: '#475569', borderColor: '#334155' },
+    activeIconWrapper: { marginRight: 12, backgroundColor: 'rgba(255, 255, 255, 0.2)', borderRadius: 12, padding: 8 },
+    activeTextWrapper: { flex: 1 },
+    activeLabel: { fontSize: 10, fontWeight: '600', color: 'rgba(255, 255, 255, 0.8)', textTransform: 'uppercase' },
+    activeStatusText: { fontSize: 15, fontWeight: 'bold', color: '#ffffff' },
+    indicatorDot: { width: 12, height: 12, borderRadius: 6, borderWidth: 2, borderColor: '#ffffff' },
+    indicatorDotOn: { backgroundColor: '#34d399' },
+    indicatorDotOff: { backgroundColor: '#94a3b8' },
 
-    // Live Pulse Marker Styles
-    driverMarker: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: 30,
-        height: 30,
-    },
+    driverMarker: { alignItems: 'center', justifyContent: 'center', width: 30, height: 30 },
     driverPulseRing: {
-        position: 'absolute',
-        width: 24,
-        height: 24,
-        borderRadius: 12,
-        backgroundColor: 'rgba(16, 185, 129, 0.3)',
-        borderWidth: 1,
-        borderColor: '#10b981',
+        position: 'absolute', width: 24, height: 24, borderRadius: 12,
+        backgroundColor: 'rgba(16, 185, 129, 0.3)', borderWidth: 1, borderColor: '#10b981',
     },
-    driverDot: {
-        width: 12,
-        height: 12,
-        borderRadius: 6,
-        backgroundColor: '#10b981',
-        borderWidth: 2,
-        borderColor: '#ffffff',
-    },
+    driverDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: '#10b981', borderWidth: 2, borderColor: '#ffffff' },
 });

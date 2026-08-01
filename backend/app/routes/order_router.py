@@ -4,23 +4,24 @@ from app.controllers.order_Controller import OrderController
 from app.models.order_model import OrderModel
 from app.database import get_db
 from typing import List
+from app.schemas.order_schema import OrderCreate
 
 router = APIRouter()
 controller = OrderController()
 
 
 @router.post("/orders/create_order", response_model=OrderModel, status_code=status.HTTP_201_CREATED)
-def create_order(order_data: OrderModel, db: Session = Depends(get_db)):
+def create_order(order_in: OrderCreate, db: Session = Depends(get_db)):
     """
-    Crea un nuevo pedido validando la existencia previa del cliente (user_id) 
-    y del conductor (driver_id, si se proporciona).
+    Creates a new order from the frontend request payload.
     """
+    order_data = OrderModel(**order_in.model_dump(), status="pending")
     new_order = controller.create_new_order_with_relations(db=db, order_data=order_data)
 
     if not new_order:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No se pudo crear el pedido. Verifica que el usuario o el conductor existan."
+            detail="Could not create order. Please check that user_id exists."
         )
 
     return new_order
@@ -59,8 +60,11 @@ def accept_order(order_id: int, driver_id: int, db: Session = Depends(get_db)):
 
     return accepted_order
 
-@router.get("/orders/history", status_code=status.HTTP_200_OK)
+@router.get("/orders/history/{user_id}", status_code=status.HTTP_200_OK)
 def get_order_history(user_id: int, db: Session = Depends(get_db)):
+    """
+    Returns order history for a specific user ID sorted from newest to oldest.
+    """
     history_result = controller.get_user_order_history_stack(db=db, user_id=user_id)
 
     if not history_result:
@@ -69,10 +73,11 @@ def get_order_history(user_id: int, db: Session = Depends(get_db)):
             detail="User not found or no order history available"
         )
 
-    return {
-        "user_id": user_id,
-        "order_history": history_result["order_history"].toArray()
-    }
+    # Return raw list from the Stack data structure
+    order_stack = history_result["order_history"]
+    items_list = order_stack.items if hasattr(order_stack, 'items') else order_stack
+
+    return items_list
 
 
 @router.get("/orders/pending", response_model=List[OrderModel], status_code=status.HTTP_200_OK)
