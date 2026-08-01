@@ -10,8 +10,8 @@ import {
 } from 'react-native';
 import { Plus } from 'lucide-react-native';
 import api from '../../services/api';
-import { useLocalSearchParams } from 'expo-router'; 
-import CartShopComponent from './components/CartShop';
+import { useLocalSearchParams } from 'expo-router';
+import CartShopComponent from '../components/CartShop';
 
 interface MenuItem {
     id: number | string;
@@ -34,14 +34,14 @@ const formatPrice = (price: number | string) => {
     return price.startsWith('$') ? price : `$${price}`;
 };
 
-const AnimatedFoodCard = ({ 
-    item, 
-    index, 
-    onAddToCart 
-}: { 
-    item: MenuItem; 
-    index: number; 
-    onAddToCart: (item: MenuItem) => void; 
+const AnimatedFoodCard = ({
+    item,
+    index,
+    onAddToCart
+}: {
+    item: MenuItem;
+    index: number;
+    onAddToCart: (item: MenuItem) => void;
 }) => {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const translateY = useRef(new Animated.Value(50)).current;
@@ -83,8 +83,8 @@ const AnimatedFoodCard = ({
 
                 <View style={styles.priceRow}>
                     <Text style={styles.price}>{formatPrice(item.price)}</Text>
-                    <TouchableOpacity 
-                        style={styles.addButton} 
+                    <TouchableOpacity
+                        style={styles.addButton}
                         activeOpacity={0.7}
                         onPress={() => onAddToCart(item)}
                     >
@@ -123,8 +123,8 @@ export default function UserActionScreen() {
 
     const handleAddToCart = (item: MenuItem) => {
         const numericId = Number(item.id);
-        const numericPrice = typeof item.price === 'number' 
-            ? item.price 
+        const numericPrice = typeof item.price === 'number'
+            ? item.price
             : parseFloat(String(item.price).replace('$', ''));
 
         setCart((prevCart) => {
@@ -147,7 +147,21 @@ export default function UserActionScreen() {
             }
         });
     };
-    
+
+    const handleUpdateQuantity = (id: number, delta: number) => {
+        setCart((prevCart) => {
+            return prevCart
+                .map((item) => {
+                    if (item.id === id) {
+                        const newQty = item.quantity + delta;
+                        return newQty > 0 ? { ...item, quantity: newQty } : null;
+                    }
+                    return item;
+                })
+                .filter(Boolean) as CartItem[];
+        });
+    };
+
     if (isLoading) {
         return (
             <View style={styles.center}>
@@ -167,9 +181,9 @@ export default function UserActionScreen() {
                 data={foodItems}
                 keyExtractor={(item) => String(item.id)}
                 renderItem={({ item, index }) => (
-                    <AnimatedFoodCard 
-                        item={item} 
-                        index={index} 
+                    <AnimatedFoodCard
+                        item={item}
+                        index={index}
                         onAddToCart={handleAddToCart}
                     />
                 )}
@@ -177,9 +191,10 @@ export default function UserActionScreen() {
                 showsVerticalScrollIndicator={false}
             />
 
-            <CartShopComponent 
-                items={cart} 
-                restaurantId={Number(restaurant_id || 2)} 
+            <CartShopComponent
+                items={cart}
+                restaurantId={Number(restaurant_id || 2)}
+                onUpdateQuantity={handleUpdateQuantity}
                 onClearCart={() => setCart([])}
             />
         </View>
