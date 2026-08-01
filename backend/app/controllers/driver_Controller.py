@@ -3,6 +3,7 @@ from sqlmodel import Session, select
 from app.models.driver_model import DriverModel
 from app.core.security import get_password_hash, verify_password
 from app.schemas.driver_schema import DriverCreate
+from typing import Any, Dict, Optional
 
 
 class DriverController:

@@ -4,6 +4,7 @@ from app.core.security import get_password_hash, verify_password
 from app.schemas.restaurant_schema import RestaurantCreate, RestaurantRead, RestaurantUpdate
 from typing import List
 from app.models.menu_model import MenuItemModel
+from typing import Any, Dict, Optional
 
 class RestaurantController:
     def create_new_restaurant(self, db: Session, restaurant_data: RestaurantCreate) -> RestaurantModel | None:

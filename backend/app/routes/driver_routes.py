@@ -57,3 +57,31 @@ def get_best_drivers(db: Session = Depends(get_db)):
             break
 
     return driver_list ## return the list of drivers sorted by rating
+
+    # Route called by React Native's fetchMapPins()
+@router.get("/drivers/nearby_orders/")
+def get_nearby_orders(db: Session = Depends(get_db)):
+    """
+    Returns nearby orders for active drivers.
+    Currently returns a placeholder list until order placement is linked.
+    """
+    # Mock data until order placement is linked
+    nearby_orders = [
+        {
+            "id": 1,
+            "name": "Order #101",
+            "latitude": 32.5149,
+            "longitude": -117.0382,
+            "status": "Ready",
+            "distance": "0.4 km"
+        },
+        {
+            "id": 2,
+            "name": "Order #102",
+            "latitude": 32.5165,
+            "longitude": -117.0398,
+            "status": "Preparing",
+            "distance": "0.9 km"
+        }
+    ]
+    return nearby_orders

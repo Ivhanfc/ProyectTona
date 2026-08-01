@@ -2,6 +2,8 @@ from sqlmodel import Session, select
 from app.models.user_model import UserModel
 from app.core.security import get_password_hash, verify_password
 from app.schemas.user_schema import UserCreate
+from typing import Any, Dict, Optional
+
 class UserController:
     
     def create_new_user(self, db: Session, user_data: UserCreate) -> UserModel | None: # this method is responsible for creating a new user in the database. It takes a database session and user data as input, and returns the created user or None if the user already exists.
