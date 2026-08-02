@@ -1,6 +1,6 @@
 # Proyect TheEater
 
-
+```mermaid
 graph TD
     %% Base Setup
     root[PROYECTTONA/] 
