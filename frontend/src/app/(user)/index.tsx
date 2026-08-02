@@ -1,107 +1,180 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, ActivityIndicator, Dimensions, ScrollView } from 'react-native';
-import { MapPin } from 'lucide-react-native';
-import MapView, { Marker, PROVIDER_GOOGLE, Circle } from 'react-native-maps';
-import api from '../../services/api';
+import React, { useEffect, useState, useRef } from 'react';
+import { StyleSheet, View, Text, ActivityIndicator } from 'react-native';
+import MapView, { Marker, Polyline, PROVIDER_DEFAULT } from 'react-native-maps';
+import decodePolyline from '@mapbox/polyline';
 
-const { width } = Dimensions.get('window');
+// URL de tu backend FastAPI (Asegúrate de ajustar IP si usas dispositivo físico o emulador)
+// Si estás en emulador Android usa 10.0.2.2 en lugar de localhost
+const API_BASE_URL = process.env.EXPO_PUBLIC_URLSERVER;
+const WS_BASE_URL = `${API_BASE_URL}/ws/user`; 
 
-const MOCK_RESTAURANTS_PINS = [
-    { id: 1, name: 'Burger Master', latitude: 32.5149, longitude: -117.0382, type: 'Burger', distance: '0.4 km' },
-    { id: 2, name: 'Pizza Palace', latitude: 32.5165, longitude: -117.0398, type: 'Pizza', distance: '0.9 km' },
-    { id: 3, name: 'Sushi Zen', latitude: 32.5122, longitude: -117.0351, type: 'Sushi', distance: '1.2 km' },
-];
+export default function MapScreen() {
+  // Estado para la ubicación del conductor
+  const [driverLocation, setDriverLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  
+  // Estado para las coordenadas de la ruta OSRM
+  const [routeCoordinates, setRouteCoordinates] = useState<Array<{ latitude: number; longitude: number }>>([]);
+  
+  // Estado para métricas de viaje (distancia y tiempo)
+  const [tripInfo, setTripInfo] = useState<{ distance: string; duration: string } | null>(null);
 
-export default function UserHomeScreen() {
-    const [mapData, setMapData] = useState(MOCK_RESTAURANTS_PINS);
-    const [isLoading, setIsLoading] = useState(false);
+  const mapRef = useRef<MapView | null>(null);
 
-    const userLocation = { latitude: 32.5140, longitude: -117.0380 };
+  // ID del usuario registrado (puede obtenerse dinámicamente de AsyncStorage)
+  const userId = "1"; 
 
-    useEffect(() => {
-        fetchMapPins();
-    }, []);
+  useEffect(() => {
+    // Conectar al WebSocket de FastAPI en la ruta /ws/user/{target_id}
+    const ws = new WebSocket(`${WS_BASE_URL}/${userId}`);
 
-    const fetchMapPins = async () => {
-        try {
-            const response = await api.get('/users/nearby/');
-            if (response.data && response.data.length > 0) {
-                setMapData(response.data);
-            }
-        } catch (error: any) {
-            console.warn('Endpoint not connected yet, using mock pin data instead.');
-        } finally {
-            setIsLoading(false);
-        }
+    ws.onopen = () => {
+      console.log(' Conectado al WebSocket del Servidor');
     };
 
-    return (
-        <View style={styles.container}>
-            {/* Interactive Google Map */}
-            <View style={styles.mapArea}>
-                <MapView
-                    provider={PROVIDER_GOOGLE}
-                    style={styles.map}
-                    initialRegion={{
-                        ...userLocation,
-                        latitudeDelta: 0.03,
-                        longitudeDelta: 0.03,
-                    }}
-                    showsUserLocation={true}
-                >
-                    <Circle
-                        center={userLocation}
-                        radius={1500}
-                        fillColor="rgba(0, 162, 255, 0.15)"
-                        strokeColor="#00a2ff"
-                        strokeWidth={2}
-                    />
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        const { lat, lon, route_info } = data;
 
-                    {mapData.map((pin) => (
-                        <Marker
-                            key={pin.id}
-                            coordinate={{ latitude: pin.latitude, longitude: pin.longitude }}
-                            title={pin.name}
-                            description={`${pin.type} • ${pin.distance}`}
-                        >
-                            <View style={styles.customMarker}>
-                                <MapPin color="#e11d48" size={30} fill="#f43f5e" />
-                            </View>
-                        </Marker>
-                    ))}
-                </MapView>
-            </View>
+        if (lat && lon) {
+          const newDriverPos = { latitude: lat, longitude: lon };
+          setDriverLocation(newDriverPos);
 
-            {/* Bottom info section */}
-            <View style={styles.infoSection}>
-                <Text style={styles.infoTitle}>Restaurants in your 1.5km radius</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.carousel}>
-                    {mapData.map((pin) => (
-                        <View key={pin.id} style={styles.infoCard}>
-                            <MapPin color="#00a2ff" size={18} />
-                            <Text style={styles.infoCardName}>{pin.name}</Text>
-                            <Text style={styles.infoCardSub}>{pin.type} • {pin.distance || '0.5 km'}</Text>
-                        </View>
-                    ))}
-                </ScrollView>
-            </View>
+          // Si el mapa ya cargó, centrar suavemente hacia la nueva posición del conductor
+          mapRef.current?.animateCamera({ center: newDriverPos, zoom: 16 }, { duration: 1000 });
+        }
+
+        // Si FastAPI nos envía los datos del cálculo de OSRM
+        if (route_info && route_info.geometry) {
+          // Si el servidor envía GeoJSON (LineString)
+          if (route_info.geometry.coordinates) {
+            const formattedCoords = route_info.geometry.coordinates.map((coord: [number, number]) => ({
+              latitude: coord[1],
+              longitude: coord[0],
+            }));
+            setRouteCoordinates(formattedCoords);
+          } 
+          // Si envía Polyline codificada en string
+          else if (typeof route_info.geometry === 'string') {
+            const decoded = decodePolyline.decode(route_info.geometry);
+            const formattedCoords = decoded.map(([lat, lng]) => ({ latitude: lat, longitude: lng }));
+            setRouteCoordinates(formattedCoords);
+          }
+
+          // Convertir distancia (m -> km) y tiempo (s -> min)
+          if (route_info.distance && route_info.duration) {
+            setTripInfo({
+              distance: (route_info.distance / 1000).toFixed(2) + ' km',
+              duration: Math.round(route_info.duration / 60) + ' min'
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error procesando el mensaje WebSocket:', error);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error('Error en WebSocket:', error);
+    };
+
+    ws.onclose = () => {
+      console.log(' WebSocket Desconectado');
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, []);
+
+  // Coordenadas iniciales por defecto (Tijuana)
+  const initialRegion = {
+    latitude: 32.5149,
+    longitude: -117.0382,
+    latitudeDelta: 0.05,
+    longitudeDelta: 0.05,
+  };
+
+  return (
+    <View style={styles.container}>
+      <MapView
+        ref={mapRef}
+        style={styles.map}
+        provider={PROVIDER_DEFAULT}
+        initialRegion={initialRegion}
+      >
+        {/* Marcador del Conductor */}
+        {driverLocation && (
+          <Marker
+            coordinate={driverLocation}
+            title="Conductor"
+            description="Tu pedido viene en camino"
+            pinColor="blue"
+          />
+        )}
+
+        {/* Línea trazada por OSRM */}
+        {routeCoordinates.length > 0 && (
+          <Polyline
+            coordinates={routeCoordinates}
+            strokeColor="#00a2ff"
+            strokeWidth={5}
+          />
+        )}
+      </MapView>
+
+      {/* Tarjeta flotante con la distancia y tiempo estimado */}
+      {tripInfo && (
+        <View style={styles.infoCard}>
+          <Text style={styles.infoTitle}>Pedido en camino</Text>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoDetail}> Tiempo: <Text style={styles.bold}>{tripInfo.duration}</Text></Text>
+            <Text style={styles.infoDetail}> Distancia: <Text style={styles.bold}>{tripInfo.distance}</Text></Text>
+          </View>
         </View>
-    );
+      )}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f8fafc' },
-    mapArea: { flex: 1 },
-    map: { width: '100%', height: '100%' },
-    customMarker: { alignItems: 'center', justifyContent: 'center' },
-    infoSection: { padding: 20, backgroundColor: '#ffffff', borderTopWidth: 1, borderColor: '#e2e8f0' },
-    infoTitle: { fontSize: 15, fontWeight: '700', color: '#0f172a', marginBottom: 12 },
-    carousel: { flexDirection: 'row' },
-    infoCard: {
-        backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0',
-        borderRadius: 12, padding: 12, marginRight: 12, width: 140,
-        alignItems: 'flex-start', gap: 4,
-    },
-    infoCardName: { fontSize: 13, fontWeight: 'bold', color: '#0f172a' },
-    infoCardSub: { fontSize: 11, color: '#64748b' },
+  container: {
+    flex: 1,
+  },
+  map: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  infoCard: {
+    position: 'absolute',
+    bottom: 30,
+    left: 20,
+    right: 20,
+    backgroundColor: '#ffffff',
+    borderRadius: 15,
+    padding: 15,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  infoTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 5,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 5,
+  },
+  infoDetail: {
+    fontSize: 14,
+    color: '#666',
+  },
+  bold: {
+    fontWeight: 'bold',
+    color: '#00a2ff',
+  },
 });

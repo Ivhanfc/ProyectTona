@@ -24,30 +24,29 @@ def seed_initial_data():
         # Check if restaurants already exist
         existing_restaurant = session.exec(select(RestaurantModel)).first()
         if not existing_restaurant:
-            print("🌱 Seeding initial restaurant & menu data...")
+            print("Seeding initial restaurant & menu data...")
 
-            # Define your list of restaurants and their respective menu items
             restaurants_data = [
                 {
                     "info": {
-                        "name": "Burger Palace 🍔",
+                        "name": "Burger Palace",
                         "address": "123 Main St, Tijuana",
                         "phone": "664-123-4567",
                         "rating": 4.8
                     },
                     "menu": [
                         {
-                            "name": "Classic Cheese Burger 🧀",
+                            "name": "Classic Cheese Burger",
                             "description": "Juicy beef patty with cheddar cheese, lettuce, and secret sauce.",
                             "price": 9.99
                         },
                         {
-                            "name": "Double Bacon Smash 🥓",
+                            "name": "Double Bacon Smash",
                             "description": "Two smashed beef patties, crispy bacon, and double American cheese.",
                             "price": 12.50
                         },
                         {
-                            "name": "Crispy French Fries 🍟",
+                            "name": "Crispy French Fries",
                             "description": "Golden crispy salted potatoes with dip.",
                             "price": 3.99
                         }
@@ -55,19 +54,19 @@ def seed_initial_data():
                 },
                 {
                     "info": {
-                        "name": "Pizza Palace 🍕",
-                        "address": "456 Revolución Ave, Tijuana",
+                        "name": "Pizza Palace",
+                        "address": "456 Revolucion Ave, Tijuana",
                         "phone": "664-987-6543",
                         "rating": 4.6
                     },
                     "menu": [
                         {
-                            "name": "Pepperoni Supreme 🍕",
+                            "name": "Pepperoni Supreme",
                             "description": "Loaded with double pepperoni, mozzarella, and marinara sauce.",
                             "price": 14.99
                         },
                         {
-                            "name": "Garlic Cheese Sticks 🥖",
+                            "name": "Garlic Cheese Sticks",
                             "description": "Baked dough brushed with garlic butter and melted cheese.",
                             "price": 6.50
                         }
@@ -75,19 +74,19 @@ def seed_initial_data():
                 },
                 {
                     "info": {
-                        "name": "Tacos El Guero 🌮",
+                        "name": "Tacos El Guero",
                         "address": "789 Agua Caliente Blvd, Tijuana",
                         "phone": "664-555-0199",
                         "rating": 4.9
                     },
                     "menu": [
                         {
-                            "name": "Taco de Carne Asada 🥩",
+                            "name": "Taco de Carne Asada",
                             "description": "Handmade corn tortilla with grilled steak, guacamole, and salsa.",
                             "price": 2.50
                         },
                         {
-                            "name": "Taco de Adobada 🌮",
+                            "name": "Taco de Adobada",
                             "description": "Marinated pork taco topped with pineapple and cilantro.",
                             "price": 2.25
                         }
@@ -95,7 +94,6 @@ def seed_initial_data():
                 }
             ]
 
-            # Iterate and save to SQLite
             for data in restaurants_data:
                 restaurant = RestaurantModel(**data["info"])
                 session.add(restaurant)
@@ -109,49 +107,7 @@ def seed_initial_data():
                 session.add_all(menu_items)
 
             session.commit()
-            print("✅ Multiple restaurants and menus seeded successfully!")
-    """Populates an empty database with initial restaurants and menu items."""
-    with Session(engine) as session:
-        # Check if restaurants already exist
-        existing_restaurant = session.exec(select(RestaurantModel)).first()
-        if not existing_restaurant:
-            print("🌱 Seeding initial restaurant & menu data...")
-            
-            # Sample restaurant
-            restaurant = RestaurantModel(
-                name="Burger Palace",
-                address="123 Main St, Tijuana",
-                phone="664-123-4567",
-                rating=4.8
-            )
-            session.add(restaurant)
-            session.commit()
-            session.refresh(restaurant)
-
-            # Sample menu items
-            items = [
-                MenuItemModel(
-                    name="Classic Cheese Burger 🍔",
-                    description="Juicy beef patty with cheddar cheese, lettuce, and secret sauce.",
-                    price=9.99,
-                    restaurant_id=restaurant.id
-                ),
-                MenuItemModel(
-                    name="Double Bacon Smash 🥓",
-                    description="Two smashed beef patties, crispy bacon, and double American cheese.",
-                    price=12.50,
-                    restaurant_id=restaurant.id
-                ),
-                MenuItemModel(
-                    name="Crispy French Fries 🍟",
-                    description="Golden crispy salted potatoes with dip.",
-                    price=3.99,
-                    restaurant_id=restaurant.id
-                )
-            ]
-            session.add_all(items)
-            session.commit()
-            print("✅ Initial data seeded successfully!")
+            print("Multiple restaurants and menus seeded successfully!")
 
 
 @asynccontextmanager
@@ -164,7 +120,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-# CORS configuration for mobile and web apps
+# CORS configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -179,11 +135,12 @@ app.include_router(driver_router, prefix="/api/v1", tags=["Drivers"])
 app.include_router(order_router, prefix="/api/v1", tags=["Orders"])
 app.include_router(restaurant_router, prefix="/api/v1", tags=["Restaurants"])
 
-osrm_url = "http://localhost:5000"
+OSRM_URL = "http://localhost:5000"
 
 async def get_osrm_route(start_lon: float, start_lat: float, end_lon: float, end_lat: float):
-    url = f"{osrm_url}/route/v1/driving/{start_lon},{start_lat};{end_lon},{end_lat}?overview=full&geometries=geojson"
-    async with httpx.AsyncClient() as client:
+    """Fetch routing geometry, duration, and distance from OSRM server."""
+    url = f"{OSRM_URL}/route/v1/driving/{start_lon},{start_lat};{end_lon},{end_lat}?overview=full&geometries=geojson"
+    async with httpx.AsyncClient(timeout=5.0) as client:
         try:
             response = await client.get(url)
             if response.status_code == 200:
@@ -191,12 +148,12 @@ async def get_osrm_route(start_lon: float, start_lat: float, end_lon: float, end
                 if data.get("routes"):
                     route = data["routes"][0]
                     return {
-                        "distance": route["distance"],
-                        "duration": route["duration"],
+                        "distance": route["distance"], # in meters
+                        "duration": route["duration"], # in seconds
                         "geometry": route["geometry"]
                     }
         except Exception as e:
-            print(f"Error in connection with OSRM: {e}")
+            print(f"OSRM Connection Error: {e}")
     return None
 
 
@@ -215,12 +172,10 @@ class TrackingManager:
 
     def disconnect(self, role: str, target_id: str):
         if role == "driver":
-            if target_id in self.active_drivers:
-                del self.active_drivers[target_id]
-            if target_id in self.driver_locations:
-                del self.driver_locations[target_id]
-        elif role == "user" and target_id in self.active_users:
-            del self.active_users[target_id]
+            self.active_drivers.pop(target_id, None)
+            self.driver_locations.pop(target_id, None)
+        elif role == "user":
+            self.active_users.pop(target_id, None)
         
     async def send_location_to_user(self, user_id: str, lat: float, lon: float, driver_id: str, route_info: Optional[dict] = None):
         if user_id in self.active_users:
@@ -250,7 +205,7 @@ async def ubication_realtime_handler(websocket: WebSocket, role: str, target_id:
         return
     
     await manager.connect(websocket, role, target_id)
-    print(f"New connection: {role.capitalize()} with ID {target_id} connected")
+    print(f"Connection established: {role.capitalize()} (ID: {target_id})")
 
     try:
         while True:
@@ -271,16 +226,16 @@ async def ubication_realtime_handler(websocket: WebSocket, role: str, target_id:
                     }
 
                 if lon is not None and lat is not None and user_id is not None:
-                    print(lat, lon)
                     route_data = None
 
+                    # If destination coordinates are provided, compute route via OSRM
                     if dest_lon is not None and dest_lat is not None:
                         route_data = await get_osrm_route(lon, lat, dest_lon, dest_lat)
 
                     await manager.send_location_to_user(user_id, lat, lon, driver_id=target_id, route_info=route_data)
 
     except WebSocketDisconnect:
-        print("The client is disconnected")
+        print(f"{role.capitalize()} (ID: {target_id}) disconnected")
     except Exception as e:
         print(f"WS Exception: {e}")     
     finally:

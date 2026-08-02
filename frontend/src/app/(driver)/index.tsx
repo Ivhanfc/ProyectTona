@@ -172,10 +172,9 @@ export default function DriverHomeScreen() {
 
         setAcceptingOrderId(orderId);
         try {
-            // PUT request to accept order endpoint
             await api.put(`/orders/${orderId}/accept?driver_id=${driverId}`);
             Alert.alert("¡Pedido Aceptado!", `Has aceptado la orden #${orderId}.`);
-            fetchMapPins(); // Refresh map pins to clear the accepted order
+            fetchMapPins();
         } catch (error: any) {
             console.error("Error al aceptar pedido:", error.response?.data || error.message);
             Alert.alert("Error", "No se pudo aceptar la orden. Puede que ya haya sido tomada.");
