@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, ActivityIndicator, Dimensions, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, Text, View, ActivityIndicator, Dimensions, ScrollView, TouchableOpacity, Alert, SafeAreaView } from 'react-native';
 import { MapPin, Wifi, WifiOff, CheckCircle } from 'lucide-react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import api from '../../services/api';
@@ -17,12 +17,24 @@ interface OrderPin {
     distance: string;
 }
 
+const getWebSocketUrl = (driverId: string) => {
+    const apiBase = api.defaults.baseURL || '';
+    let wsBase = apiBase
+        .replace(/^http:/, 'ws:')
+        .replace(/^https:/, 'wss:')
+        .replace(/\/api\/v1$/, '');
+
+    if (wsBase.endsWith('/')) {
+        wsBase = wsBase.slice(0, -1);
+    }
+    return `${wsBase}/ws/driver/${driverId}`;
+};
+
 export default function DriverHomeScreen() {
     const [mapData, setMapData] = useState<OrderPin[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [acceptingOrderId, setAcceptingOrderId] = useState<number | null>(null);
 
-    // Active conductor mode status states
     const [isActive, setIsActive] = useState<boolean>(false);
     const [driverId, setDriverId] = useState<string | null>(null);
     const [wsConnection, setWsConnection] = useState<WebSocket | null>(null);
@@ -54,7 +66,6 @@ export default function DriverHomeScreen() {
         fetchMapPins();
     }, []);
 
-    // WebSocket and location streaming hook
     useEffect(() => {
         let ws: WebSocket | null = null;
         let sub: Location.LocationSubscription | null = null;
@@ -63,28 +74,21 @@ export default function DriverHomeScreen() {
         const startTrackingAndWebsocket = async () => {
             if (!isActive || !driverId) return;
 
-            try {
-                const apiBase = api.defaults.baseURL || '';
-                const wsBase = apiBase
-                    .replace(/^http:/, 'ws:')
-                    .replace(/^https:/, 'wss:')
-                    .replace(/\/api\/v1$/, '');
+            // Validación de seguridad para evitar crashes si el usuario reinicia la app estando activo
+            const { status } = await Location.getForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                setIsActive(false);
+                await AsyncStorage.setItem('driver_active_status', 'off');
+                return;
+            }
 
-                const wsUrl = `${wsBase}/ws/driver/${driverId}`;
-                console.log('Connecting WebSocket to:', wsUrl);
+            try {
+                const wsUrl = getWebSocketUrl(driverId);
                 ws = new WebSocket(wsUrl);
 
-                ws.onopen = () => {
-                    console.log('WebSocket connection opened successfully.');
-                };
-
-                ws.onerror = (e) => {
-                    console.error('WebSocket connection error:', e);
-                };
-
-                ws.onclose = () => {
-                    console.log('WebSocket connection closed.');
-                };
+                ws.onopen = () => console.log('WebSocket de conductor conectado.');
+                ws.onerror = (e) => console.error('Error en WebSocket de conductor:', e);
+                ws.onclose = () => console.log('WebSocket de conductor desconectado.');
 
                 if (isMounted) setWsConnection(ws);
             } catch (err) {
@@ -95,8 +99,8 @@ export default function DriverHomeScreen() {
                 sub = await Location.watchPositionAsync(
                     {
                         accuracy: Location.Accuracy.High,
-                        timeInterval: 5000,
-                        distanceInterval: 5,
+                        timeInterval: 4000,
+                        distanceInterval: 3,
                     },
                     (location) => {
                         const { latitude, longitude } = location.coords;
@@ -117,7 +121,7 @@ export default function DriverHomeScreen() {
 
                 if (isMounted) setLocationSubscription(sub);
             } catch (err) {
-                console.error('Error starting location subscription:', err);
+                console.error('Error al iniciar transmisión de ubicación:', err);
             }
         };
 
@@ -138,7 +142,7 @@ export default function DriverHomeScreen() {
                 if (status !== 'granted') {
                     Alert.alert(
                         'Acceso de Ubicación Requerido',
-                        'Por favor, concede acceso a la ubicación para poder cambiar a modo activo.'
+                        'Por favor, concede acceso a la ubicación para activar tu estado.'
                     );
                     return;
                 }
@@ -147,18 +151,19 @@ export default function DriverHomeScreen() {
             setIsActive(nextState);
             await AsyncStorage.setItem('driver_active_status', nextState ? 'on' : 'off');
         } catch (error) {
-            console.error('Error toggling active state:', error);
+            console.error('Error cambiando estado activo:', error);
         }
     };
 
     const fetchMapPins = async () => {
         try {
+            setIsLoading(true);
             const response = await api.get('/drivers/nearby_orders/');
-            if (response.data) {
+            if (response.data && Array.isArray(response.data)) {
                 setMapData(response.data);
             }
         } catch (error: any) {
-            console.warn('Error fetching nearby orders:', error.message);
+            console.warn('Error al obtener órdenes cercanas:', error.message);
         } finally {
             setIsLoading(false);
         }
@@ -185,79 +190,85 @@ export default function DriverHomeScreen() {
 
     return (
         <View style={styles.container}>
-            <View style={styles.mapArea}>
-                <MapView
-                    provider={PROVIDER_GOOGLE}
-                    style={styles.map}
-                    initialRegion={initialRegion}
-                    showsUserLocation={true}
-                    showsMyLocationButton={true}
-                >
-                    {mapData.map((pin) => (
-                        <Marker
-                            key={pin.id}
-                            coordinate={{ latitude: pin.latitude, longitude: pin.longitude }}
-                            title={pin.name}
-                            description={`${pin.status} • ${pin.distance}`}
-                        >
-                            <View style={styles.customMarker}>
-                                <MapPin color="#e11d48" size={30} fill="#f59e0b" />
-                            </View>
-                        </Marker>
-                    ))}
-
-                    {isActive && currentCoords && (
-                        <Marker
-                            coordinate={currentCoords}
-                            title="Tu Ubicación (Activo)"
-                            description="Transmitiendo en tiempo real"
-                        >
-                            <View style={styles.driverMarker}>
-                                <View style={styles.driverPulseRing} />
-                                <View style={styles.driverDot} />
-                            </View>
-                        </Marker>
-                    )}
-                </MapView>
-
-                {/* Floating Active Toggle Button */}
-                <View style={styles.floatingContainer}>
-                    <TouchableOpacity
-                        activeOpacity={0.85}
-                        onPress={toggleActiveStatus}
-                        style={[
-                            styles.activeButton,
-                            isActive ? styles.activeButtonOn : styles.activeButtonOff
-                        ]}
+            {/* MAPA FULL SCREEN */}
+            <MapView
+                provider={PROVIDER_GOOGLE}
+                style={styles.map}
+                initialRegion={initialRegion}
+                showsUserLocation={true}
+                showsMyLocationButton={false}
+            >
+                {/* Órdenes Pendientes */}
+                {mapData.map((pin) => (
+                    <Marker
+                        key={pin.id}
+                        coordinate={{ latitude: pin.latitude, longitude: pin.longitude }}
+                        title={pin.name}
+                        description={`${pin.status} • ${pin.distance}`}
                     >
-                        <View style={styles.activeIconWrapper}>
-                            {isActive ? <Wifi color="#ffffff" size={20} /> : <WifiOff color="#ffffff" size={20} />}
+                        <View style={styles.customMarker}>
+                            <MapPin color="#EF4444" size={36} fill="#FCD34D" />
                         </View>
-                        <View style={styles.activeTextWrapper}>
-                            <Text style={styles.activeLabel}>Modo Conductor</Text>
-                            <Text style={styles.activeStatusText}>
-                                {isActive ? 'ACTIVE: ON' : 'ACTIVE: OFF'}
-                            </Text>
-                        </View>
-                        <View style={[
-                            styles.indicatorDot,
-                            isActive ? styles.indicatorDotOn : styles.indicatorDotOff
-                        ]} />
-                    </TouchableOpacity>
-                </View>
-            </View>
+                    </Marker>
+                ))}
 
-            {/* Bottom Orders Section with Action Buttons */}
-            <View style={styles.infoSection}>
-                <Text style={styles.infoTitle}>Ordenes Disponibles ({mapData.length})</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.carousel}>
+                {/* Ubicación Real del Conductor (Pulso) */}
+                {isActive && currentCoords && (
+                    <Marker
+                        coordinate={currentCoords}
+                        title="Tu Ubicación (Activo)"
+                        anchor={{ x: 0.5, y: 0.5 }}
+                    >
+                        <View style={styles.driverMarker}>
+                            <View style={styles.driverPulseRing} />
+                            <View style={styles.driverDot} />
+                        </View>
+                    </Marker>
+                )}
+            </MapView>
+
+            {/* HEADER FLOTANTE - MODO CONDUCTOR */}
+            <SafeAreaView style={styles.floatingTop}>
+                <TouchableOpacity
+                    activeOpacity={0.85}
+                    onPress={toggleActiveStatus}
+                    style={[
+                        styles.activeButton,
+                        isActive ? styles.activeButtonOn : styles.activeButtonOff
+                    ]}
+                >
+                    <View style={styles.activeIconWrapper}>
+                        {isActive ? <Wifi color="#ffffff" size={20} /> : <WifiOff color="#ffffff" size={20} />}
+                    </View>
+                    <View style={styles.activeTextWrapper}>
+                        <Text style={styles.activeLabel}>Modo Conductor</Text>
+                        <Text style={styles.activeStatusText}>
+                            {isActive ? 'EN LÍNEA' : 'DESCONECTADO'}
+                        </Text>
+                    </View>
+                    <View style={[
+                        styles.indicatorDot,
+                        isActive ? styles.indicatorDotOn : styles.indicatorDotOff
+                    ]} />
+                </TouchableOpacity>
+            </SafeAreaView>
+
+            {/* CARRUSEL INFERIOR FLOTANTE - ÓRDENES DISPONIBLES */}
+            <View style={styles.floatingBottom}>
+                <View style={styles.infoSectionHeader}>
+                    <Text style={styles.infoTitle}>Solicitudes Cercanas ({mapData.length})</Text>
+                </View>
+
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.carouselList}>
                     {mapData.length === 0 ? (
-                        <Text style={styles.emptyText}>No hay pedidos pendientes por el momento.</Text>
+                        <View style={styles.emptyCard}>
+                            <Text style={styles.emptyText}>No hay pedidos cerca. Sigue manejando para encontrar nuevas solicitudes.</Text>
+                        </View>
                     ) : (
                         mapData.map((pin) => (
                             <View key={pin.id} style={styles.infoCard}>
                                 <View style={styles.cardHeader}>
-                                    <MapPin color="#00a2ff" size={16} />
+                                    <MapPin color="#EF4444" size={18} />
                                     <Text style={styles.infoCardName} numberOfLines={1}>{pin.name}</Text>
                                 </View>
                                 <Text style={styles.infoCardSub}>{pin.status} • {pin.distance}</Text>
@@ -271,8 +282,8 @@ export default function DriverHomeScreen() {
                                         <ActivityIndicator color="#FFFFFF" size="small" />
                                     ) : (
                                         <>
-                                            <CheckCircle color="#FFFFFF" size={14} style={{ marginRight: 4 }} />
-                                            <Text style={styles.acceptButtonText}>Aceptar</Text>
+                                            <CheckCircle color="#FFFFFF" size={16} style={{ marginRight: 6 }} />
+                                            <Text style={styles.acceptButtonText}>Aceptar Viaje</Text>
                                         </>
                                     )}
                                 </TouchableOpacity>
@@ -286,47 +297,182 @@ export default function DriverHomeScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f8fafc' },
-    mapArea: { flex: 1 },
-    map: { width: '100%', height: '100%' },
-    customMarker: { alignItems: 'center', justifyContent: 'center' },
-    infoSection: { padding: 20, backgroundColor: '#ffffff', borderTopWidth: 1, borderColor: '#e2e8f0' },
-    infoTitle: { fontSize: 15, fontWeight: '700', color: '#0f172a', marginBottom: 12 },
-    carousel: { flexDirection: 'row' },
-    emptyText: { color: '#94a3b8', fontSize: 13, fontStyle: 'italic', paddingVertical: 10 },
-    infoCard: {
-        backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0',
-        borderRadius: 16, padding: 12, marginRight: 12, width: 170,
-        justifyContent: 'space-between',
+    container: {
+        flex: 1,
+        backgroundColor: '#F8FAFC',
     },
-    cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    infoCardName: { fontSize: 13, fontWeight: 'bold', color: '#0f172a', flex: 1 },
-    infoCardSub: { fontSize: 11, color: '#64748b', marginVertical: 6 },
-    acceptButton: {
-        backgroundColor: '#10b981', borderRadius: 10, paddingVertical: 8,
-        flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 4,
+    map: {
+        width: '100%',
+        height: '100%',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
     },
-    acceptButtonText: { color: '#FFFFFF', fontWeight: '700', fontSize: 12 },
-
-    floatingContainer: { position: 'absolute', top: 20, left: 20, right: 20, zIndex: 10 },
-    activeButton: {
-        flexDirection: 'row', alignItems: 'center', paddingVertical: 12,
-        paddingHorizontal: 16, borderRadius: 20, borderWidth: 1, elevation: 6,
+    customMarker: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
     },
-    activeButtonOn: { backgroundColor: '#10b981', borderColor: '#059669' },
-    activeButtonOff: { backgroundColor: '#475569', borderColor: '#334155' },
-    activeIconWrapper: { marginRight: 12, backgroundColor: 'rgba(255, 255, 255, 0.2)', borderRadius: 12, padding: 8 },
-    activeTextWrapper: { flex: 1 },
-    activeLabel: { fontSize: 10, fontWeight: '600', color: 'rgba(255, 255, 255, 0.8)', textTransform: 'uppercase' },
-    activeStatusText: { fontSize: 15, fontWeight: 'bold', color: '#ffffff' },
-    indicatorDot: { width: 12, height: 12, borderRadius: 6, borderWidth: 2, borderColor: '#ffffff' },
-    indicatorDotOn: { backgroundColor: '#34d399' },
-    indicatorDotOff: { backgroundColor: '#94a3b8' },
-
-    driverMarker: { alignItems: 'center', justifyContent: 'center', width: 30, height: 30 },
+    driverMarker: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 40,
+        height: 40,
+    },
     driverPulseRing: {
-        position: 'absolute', width: 24, height: 24, borderRadius: 12,
-        backgroundColor: 'rgba(16, 185, 129, 0.3)', borderWidth: 1, borderColor: '#10b981',
+        position: 'absolute',
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: 'rgba(16, 185, 129, 0.4)',
+        borderWidth: 1,
+        borderColor: '#10b981',
     },
-    driverDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: '#10b981', borderWidth: 2, borderColor: '#ffffff' },
+    driverDot: {
+        width: 14,
+        height: 14,
+        borderRadius: 7,
+        backgroundColor: '#10B981',
+        borderWidth: 2,
+        borderColor: '#FFFFFF',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.4,
+        shadowRadius: 3,
+    },
+    floatingTop: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 10,
+    },
+    activeButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+        borderRadius: 20,
+        margin: 16,
+        marginTop: 40,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 10,
+        elevation: 8,
+    },
+    activeButtonOn: { backgroundColor: '#0F172A', borderWidth: 1, borderColor: '#1E293B' },
+    activeButtonOff: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0' },
+    activeIconWrapper: {
+        marginRight: 12,
+        backgroundColor: 'rgba(148, 163, 184, 0.2)',
+        borderRadius: 12,
+        padding: 10,
+    },
+    activeTextWrapper: { flex: 1 },
+    activeLabel: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: '#64748B',
+        textTransform: 'uppercase',
+    },
+    activeStatusText: {
+        fontSize: 16,
+        fontWeight: '800',
+        color: '#10B981',
+    },
+    indicatorDot: {
+        width: 14,
+        height: 14,
+        borderRadius: 7,
+        borderWidth: 2,
+        borderColor: '#FFFFFF',
+    },
+    indicatorDotOn: { backgroundColor: '#10B981' },
+    indicatorDotOff: { backgroundColor: '#94A3B8' },
+
+    floatingBottom: {
+        position: 'absolute',
+        bottom: 20,
+        left: 0,
+        right: 0,
+        zIndex: 10,
+    },
+    infoSectionHeader: {
+        paddingHorizontal: 20,
+        marginBottom: 10,
+    },
+    infoTitle: {
+        fontSize: 18,
+        fontWeight: '800',
+        color: '#0F172A',
+        textShadowColor: 'rgba(255,255,255,0.9)',
+        textShadowOffset: { width: 1, height: 1 },
+        textShadowRadius: 2,
+    },
+    carouselList: {
+        paddingHorizontal: 16,
+        gap: 12,
+    },
+    emptyCard: {
+        backgroundColor: 'rgba(255,255,255,0.9)',
+        borderRadius: 16,
+        padding: 20,
+        width: width - 32,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+    },
+    emptyText: {
+        color: '#64748B',
+        fontSize: 14,
+        fontWeight: '600',
+        textAlign: 'center',
+    },
+    infoCard: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 20,
+        padding: 16,
+        width: 240,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.15,
+        shadowRadius: 10,
+        elevation: 6,
+    },
+    cardHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 4,
+    },
+    infoCardName: {
+        fontSize: 16,
+        fontWeight: '800',
+        color: '#0F172A',
+        flex: 1,
+    },
+    infoCardSub: {
+        fontSize: 13,
+        color: '#64748B',
+        fontWeight: '500',
+        marginBottom: 12,
+    },
+    acceptButton: {
+        backgroundColor: '#0F172A',
+        borderRadius: 14,
+        paddingVertical: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    acceptButtonText: {
+        color: '#FFFFFF',
+        fontWeight: '800',
+        fontSize: 14,
+    },
 });
