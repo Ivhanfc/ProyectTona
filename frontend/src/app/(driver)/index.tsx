@@ -15,6 +15,7 @@ interface OrderPin {
     longitude: number;
     status: string;
     distance: string;
+    user_id: number;
 }
 
 const getWebSocketUrl = (driverId: string) => {
@@ -34,6 +35,7 @@ export default function DriverHomeScreen() {
     const [mapData, setMapData] = useState<OrderPin[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [acceptingOrderId, setAcceptingOrderId] = useState<number | null>(null);
+    const [activeCustomerUserId, setActiveCustomerUserId] = useState<number | null>(null);
 
     const [isActive, setIsActive] = useState<boolean>(false);
     const [driverId, setDriverId] = useState<string | null>(null);
@@ -110,10 +112,11 @@ export default function DriverHomeScreen() {
                         }
 
                         if (ws && ws.readyState === WebSocket.OPEN) {
+
                             ws.send(JSON.stringify({
                                 lat: latitude,
                                 lon: longitude,
-                                user_id: null
+                                user_id: activeCustomerUserId
                             }));
                         }
                     }
@@ -169,7 +172,7 @@ export default function DriverHomeScreen() {
         }
     };
 
-    const handleAcceptOrder = async (orderId: number) => {
+    const handleAcceptOrder = async (orderId: number, orderUserId: number) => {
         if (!driverId) {
             Alert.alert("Error", "No se encontró el ID del conductor.");
             return;
@@ -179,6 +182,7 @@ export default function DriverHomeScreen() {
         try {
             await api.put(`/orders/${orderId}/accept?driver_id=${driverId}`);
             Alert.alert("¡Pedido Aceptado!", `Has aceptado la orden #${orderId}.`);
+            setActiveCustomerUserId(orderUserId);
             fetchMapPins();
         } catch (error: any) {
             console.error("Error al aceptar pedido:", error.response?.data || error.message);
@@ -275,7 +279,7 @@ export default function DriverHomeScreen() {
 
                                 <TouchableOpacity
                                     style={styles.acceptButton}
-                                    onPress={() => handleAcceptOrder(pin.id)}
+                                    onPress={() => handleAcceptOrder(pin.id, pin.user_id)}
                                     disabled={acceptingOrderId === pin.id}
                                 >
                                     {acceptingOrderId === pin.id ? (

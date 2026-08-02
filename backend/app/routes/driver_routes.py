@@ -79,7 +79,8 @@ def get_nearby_orders(db: Session = Depends(get_db)):
             "latitude": order.latitude,
             "longitude": order.longitude,
             "status": order.status.capitalize(),
-            "distance": "0.5 km"
+            "distance": "0.5 km",
+            "user_id": order.user_id
         }
         for order in pending_orders
     ]

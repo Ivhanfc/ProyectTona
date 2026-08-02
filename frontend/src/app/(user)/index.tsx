@@ -112,9 +112,11 @@ export default function UserHomeScreen() {
   useEffect(() => {
     const fetchActiveDrivers = async () => {
       try {
-        const response = await api.get('/drivers/active-locations');
+        // Agregamos ?t=... para forzar a Android a descargar datos frescos siempre
+        const timestamp = new Date().getTime();
+        const response = await api.get(`/drivers/active-locations?t=${timestamp}`);
+
         if (response.data) {
-          // El backend devuelve { "driver_id": { lat, lon, updated_at } }
           const driversArray = Object.entries(response.data).map(([id, data]: any) => ({
             id,
             latitude: data.lat,
