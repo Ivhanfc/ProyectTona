@@ -1,41 +1,6 @@
+# Proyect TheEater
 
-1. Project Overview
 
-The primary objective of this project is to develop a food delivery simulator inspired by platforms like Uber Eats and Rappi. The system allows users to browse menus and view nearby delivery drivers in real time. Concurrently, drivers have access to an order queue, enabling them to select and claim pending orders based on proximity or preference.
-2. Technology Stack
-
-To ensure high performance and scalability, the platform is built using the following technologies:
-
-    Backend: FastAPI (Python), chosen for its asynchronous capabilities, speed, and efficient API development.
-
-    Frontend: React Native with Expo, providing a cross-platform, responsive, and interactive mobile user interface.
-
-    Geolocational Routing: OSRM (Open Source Routing Machine). This engine is utilized to calculate optimal routes, measure precise distance between drivers, restaurant, and users, and compute Estimated Times of Arrival.
-
-        🔗 Official Resource: project-osrm.org
-
-3. Data Structures and Algorithms Applied
-
-As a core requirement for the Data Structures course, the System implements the following foundational concepts:
-
-    Order Management (Queues): Incoming customer orders are handled using a queue structure. Drivers Interact with this queue to view, select, and process pending deliveries.
-
-    Ranking System (Bubble Sort): The Bubble Sort algorithm is implemented to dynamically sort and generate a leaderboard, showcasing the top-rated restaurants and drivers based on star rating.
-
-    History Orders (Stack): Completed user orders are managed using a Stack. This ensures that when the user opens the application, the user can see the history of orders.
-
-4. Network and Communication Protocols
-
-Data transmission within the simulator utilizes specific networking protocols to balance speed:
-
-    HTTP/2: Used for efficient, multiplexed communication between the frontend client and the FastAPI backend, using API REST.
-
-    WebSockets: Used for the real-time communication in the driver ubication and server to response.
-
-🏛️ Architectural Pattern
-
-We implement the MVC (Model-View-Controller) architecture to ensure clean code separation, enhance maintainability, and accelerate development speed.
-```mermaid
 graph TD
     %% Base Setup
     root[PROYECTTONA/] 
@@ -75,3 +40,157 @@ graph TD
     style routes fill:#4D7C0F,stroke:#3F6212,stroke-width:1px,color:#fff
     style db_file fill:#4B5563,stroke:#374151,color:#fff
     ```
+
+## Descripción general
+
+ProyectTona es un prototipo de plataforma de delivery de alimentos inspirada en experiencias como Uber Eats y Rappi. El proyecto busca simular el flujo completo de una aplicación de entregas: usuarios pueden explorar restaurantes y menús, crear pedidos, mientras que los repartidores pueden ver órdenes pendientes, aceptarlas y recibir actualizaciones en tiempo real de ubicación.
+
+La solución está compuesta por un backend en FastAPI y una aplicación móvil desarrollada con React Native y Expo. Además, incorpora comunicación en tiempo real mediante WebSockets y soporte para cálculo de rutas con OSRM.
+
+## Objetivo principal
+
+Implementar una experiencia funcional de entrega de alimentos con una arquitectura modular que permita:
+
+- gestionar restaurantes, usuarios, repartidores y pedidos;
+- simular la interacción entre cliente y repartidor;
+- exponer APIs REST para la lógica de negocio;
+- mostrar ubicaciones en tiempo real y rutas aproximadas;
+- servir como base para un proyecto académico o de demostración.
+
+## Requisitos previos
+
+Antes de levantar el proyecto, asegúrate de tener instalado lo siguiente:
+
+- Python 3.10 o superior
+- Node.js 18 o superior
+- npm o yarn
+- Expo CLI (opcional si prefieres usar npx expo)
+- Un servidor OSRM local opcional en http://localhost:5000 para cálculo de rutas
+
+## Tecnologías utilizadas
+
+- Backend: FastAPI, SQLModel, Uvicorn, HTTPX
+- Frontend: React Native, Expo, Axios, React Navigation, react-native-maps
+- Base de datos: SQLite
+- Comunicación en tiempo real: WebSockets
+- Ruteo: OSRM
+
+## Instalación y configuración
+
+### 1. Backend
+
+Desde la raíz del proyecto:
+
+```bash
+cd backend
+python -m venv .venv
+```
+
+Activación del entorno virtual:
+
+- Windows:
+
+```bash
+.venv\Scripts\activate
+```
+
+- Linux/macOS:
+
+```bash
+source .venv/bin/activate
+```
+
+Instalación de dependencias:
+
+```bash
+pip install fastapi uvicorn sqlmodel httpx
+```
+
+Ejecución del servidor:
+
+```bash
+python main.py
+```
+
+El backend quedará disponible en:
+
+- http://localhost:8000
+- Documentación interactiva: http://localhost:8000/docs
+
+La base de datos SQLite se crea automáticamente al iniciar la aplicación.
+
+### 2. Frontend
+
+Desde la raíz del proyecto:
+
+```bash
+cd frontend
+npm install
+```
+
+Configura la URL del backend para la app móvil. Si vas a probarla desde un dispositivo físico, utiliza la IP de tu máquina en lugar de localhost:
+
+- Windows PowerShell:
+
+```powershell
+$env:EXPO_PUBLIC_URLSERVER="http://192.168.1.103:8000"
+```
+
+- Bash/Linux/macOS:
+
+```bash
+export EXPO_PUBLIC_URLSERVER="http://192.168.1.103:8000"
+```
+
+Inicia la aplicación:
+
+```bash
+npx expo start
+```
+
+--------------> Si vas a probar la app en un emulador Android, puede ser necesario usar la IP local del host o el valor 10.0.2.2 según tu configuración.
+
+### 3. Servidor OSRM (opcional)
+
+Para habilitar cálculo de rutas más realista, puedes levantar un servidor OSRM local y dejarlo disponible en http://localhost:5000. Si no está activo, la aplicación puede seguir funcionando, aunque algunas funciones de ruta y ETA quedarán limitadas.
+
+## Estructura del proyecto
+
+```text
+ProyectTona_beta6/
+├── backend/
+│   ├── main.py                  # Punto de entrada del servidor FastAPI
+│   ├── config.py                # Configuraciones de entorno y utilidades
+│   ├── app/
+│   │   ├── controllers/         # Lógica de negocio de usuarios, pedidos y restaurantes
+│   │   ├── models/              # Modelos SQLModel para la base de datos
+│   │   ├── routes/              # Endpoints REST y WebSockets
+│   │   ├── schemas/             # Esquemas de entrada/salida de datos
+│   │   └── database.py          # Configuración de la conexión SQLite
+│   └── oldest/                  # Versiones antiguas o prototipos del backend
+├── frontend/
+│   ├── src/
+│   │   ├── app/                 # Pantallas, navegación y vistas principales
+│   │   ├── services/            # Cliente HTTP para consumir la API
+│   │   └── config/              # Configuraciones auxiliares como mapas
+│   └── assets/                  # Recursos visuales e íconos
+├── oldest/                      # Prototipos previos del proyecto
+└── readme.md                    # Documentación general del repositorio
+```
+
+## Funcionalidades principales
+
+- Registro y manejo de usuarios y repartidores
+- Gestión de restaurantes y menús
+- Creación de pedidos y seguimiento de estado
+- Cola de órdenes pendientes para repartidores
+- Historial de pedidos por usuario
+- Seguimiento de ubicación en tiempo real
+- Integración con rutas y estimación de tiempos
+
+
+----------> Notas de desarrollo <-----------
+
+- El proyecto sigue una estructura modular orientada a separar responsabilidades entre controladores, modelos, rutas y esquemas.
+- La base de datos se inicializa automáticamente con tablas y datos de ejemplo al arrancar el backend.
+- Para pruebas locales, es recomendable usar una IP local en la configuración del frontend para evitar problemas de conexión desde dispositivos móviles.
