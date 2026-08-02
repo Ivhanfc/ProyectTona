@@ -271,13 +271,7 @@ export default function UserHomeScreen() {
         </MapView>
       </View>
 
-      {/* HEADER FLOTANTE SUPERIOR */}
-      <SafeAreaView style={styles.floatingHeader}>
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>¿Qué se te antoja hoy?</Text>
-          <Text style={styles.headerSubtitle}>Descubre lo mejor de tu ciudad</Text>
-        </View>
-      </SafeAreaView>
+
 
       {/* TARJETA DE VIAJE Y CARRUSEL FLOTANTE INFERIOR */}
       <View style={styles.floatingBottom}>
