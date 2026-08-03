@@ -11,6 +11,6 @@ class DriverModel(DriverBase, table=True): # this line define a class create a s
     hashed_password: str = Field(default=None)
     is_active: bool = Field(default=True)
     rating: float = Field(default=0.0)
-
+    
     orders: List["OrderModel"] = Relationship(back_populates="driver")
 
