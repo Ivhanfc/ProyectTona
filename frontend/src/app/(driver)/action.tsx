@@ -30,7 +30,7 @@ export default function DriverActionScreen() {
             // 2. Si tu 'api' ya tiene la baseURL configurada, usa solo el endpoint relativo:
             // const response = await api.get('/drivers/pending/');
             const urlApi = process.env.EXPO_PUBLIC_URLSERVER;
-            const response = await api.get(`${urlApi}/api/v1/orders/pending/`);
+            const response = await api.get(`${urlApi}/api/v1/orders/pending`);
 
             if (response.data && response.data.length > 0) {
                 setOrders(response.data);
