@@ -52,7 +52,7 @@ def get_best_drivers(db: Session = Depends(get_db)):
     for i in range(n): ## bubble sort with flag to sort the drivers based in the rating from lowest to highest
         swapped = False
         for j in range(0, n - i - 1):
-            if driver_list[j].rating > driver_list[j + 1].rating:
+            if driver_list[j].rating < driver_list[j + 1].rating:
                 driver_list[j], driver_list[j + 1] = driver_list[j + 1], driver_list[j]
                 swapped = True
         if not swapped:
