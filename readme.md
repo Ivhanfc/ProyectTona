@@ -7,6 +7,8 @@ ProyectTona es un prototipo de plataforma de delivery de alimentos inspirada en 
 
 La solución está compuesta por un backend en FastAPI y una aplicación móvil desarrollada con React Native y Expo. Además, incorpora comunicación en tiempo real mediante WebSockets y soporte para cálculo de rutas con OSRM.
 
+--------------> https://www.youtube.com/watch?v=_gKNTIgdRk8 <---------------------------------
+
 ## Objetivo principal
 
 Implementar una experiencia funcional de entrega de alimentos con una arquitectura modular que permita:
