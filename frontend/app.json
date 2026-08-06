@@ -23,7 +23,7 @@
       "package": "com.fearjesteam.edward",
       "config": {
         "googleMaps": {
-          "apiKey": "AQUÍ_TU_API_KEY_REAL"
+          "apiKey": "ApiKey"
         }
       }
     },
